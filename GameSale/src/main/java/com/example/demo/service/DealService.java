@@ -2,6 +2,8 @@ package com.example.demo.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -13,20 +15,36 @@ import com.example.demo.dto.front.DealDto;
 public class DealService {
 
     private static final String API_KEY = "1c17fd70c2b436ce327b048ce319119b8bdcd4e2";
-    private static final String BASE_URL = "https://api.isthereanydeal.com/deals/v2?key=" + API_KEY + "&shops=61&country=jp&limit=40";
+    private static final String BASE_URL = "https://api.isthereanydeal.com/deals/v2";
 
-    public List<DealDto> fetchDeals() {
+    private static final Map<String, String> SHOP_IDS = Map.of(
+        "steam", "61",
+        "epic", "16",
+        "ea", "52",
+        "microsoft", "48",
+        "fanatical", "6"
+    );
+
+    public List<DealDto> fetchDeals(List<String> selectedStores, int offset, int limit) {
+        String shopsParam = selectedStores.stream()
+                .map(String::toLowerCase)
+                .map(SHOP_IDS::get)
+                .filter(Objects::nonNull)
+                .reduce((a, b) -> a + "," + b)
+                .orElse("61"); // デフォルトSteam
+
+        String url = BASE_URL + "?key=" + API_KEY
+                + "&shops=" + shopsParam
+                + "&country=jp"
+                + "&offset=" + offset
+                + "&limit=" + limit;
+
         RestTemplate restTemplate = new RestTemplate();
-        ApiDealResponse apiResponse = restTemplate.getForObject(BASE_URL, ApiDealResponse.class);
-
-        System.out.println("===== API raw response =====");
-        System.out.println(apiResponse);
+        ApiDealResponse apiResponse = restTemplate.getForObject(url, ApiDealResponse.class);
 
         List<DealDto> deals = new ArrayList<>();
 
         if (apiResponse != null && apiResponse.getList() != null) {
-            System.out.println("データ件数: " + apiResponse.getList().size());
-
             for (ApiDealResponse.ListItem item : apiResponse.getList()) {
                 DealDto dto = new DealDto();
                 dto.setTitle(item.getTitle());
@@ -40,14 +58,13 @@ public class DealService {
                 }
 
                 if (item.getAssets() != null) {
-                    dto.setImage(item.getAssets().getBanner300() != null ? item.getAssets().getBanner300()
+                    dto.setImage(item.getAssets().getBanner300() != null
+                            ? item.getAssets().getBanner300()
                             : item.getAssets().getBanner145());
                 }
 
                 deals.add(dto);
             }
-        } else {
-            System.out.println("⚠️ APIレスポンスが空または形式が異なります");
         }
 
         return deals;

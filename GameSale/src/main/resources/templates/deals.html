@@ -1,32 +1,49 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>ゲームセール一覧</title>
-    <script src="/js/deals.js" defer></script>
-    <style>
-        body { font-family: sans-serif; background: #f5f5f5; margin: 20px; }
-        h1 { text-align: center; }
-        .container { display: flex; flex-wrap: wrap; justify-content: center; }
-        .card {
-            width: 220px;
-            margin: 10px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            overflow: hidden;
-            text-align: center;
-            transition: transform 0.2s;
-        }
-        .card:hover { transform: translateY(-5px); }
-        .card img { width: 100%; height: 120px; object-fit: cover; }
-        .card h3 { margin: 8px 0; font-size: 16px; }
-        .price { font-size: 14px; }
-        .cut { color: red; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ゲームセール情報</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>🎮 Steamセール情報</h1>
-    <div class="container" id="deal-container"></div>
+<body class="bg-gray-100 text-gray-800 relative">
+  <div class="max-w-6xl mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">🎮 ゲームセール情報</h1>
+
+    <!-- ストア選択 -->
+    <div class="mb-4 flex flex-wrap gap-4 items-center">
+      <label><input type="checkbox" class="store-checkbox" value="steam" checked> Steam</label>
+      <label><input type="checkbox" class="store-checkbox" value="epic"> Epic Games</label>
+      <label><input type="checkbox" class="store-checkbox" value="ea"> EA Store</label>
+      <label><input type="checkbox" class="store-checkbox" value="microsoft"> Microsoft Store</label>
+      <label><input type="checkbox" class="store-checkbox" value="fanatical"> Fanatical</label>
+
+      <button id="fetchDealsBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        セール情報を取得
+      </button>
+    </div>
+
+    <!-- 検索中メッセージ -->
+    <div id="loadingMessage" class="text-center text-gray-500 my-4 hidden">
+      🔄 検索中...
+    </div>
+
+    <!-- カード表示 -->
+    <div id="dealsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+
+    <!-- ページネーション -->
+    <div id="pagination" class="flex justify-center items-center mt-4 gap-2">
+      <button id="prevPage" class="bg-gray-300 text-gray-700 px-3 py-1 rounded disabled:opacity-50" disabled>前へ</button>
+<!--      <span id="pageInfo" class="mx-2">1 / 1</span>-->
+      <button id="nextPage" class="bg-gray-300 text-gray-700 px-3 py-1 rounded disabled:opacity-50">次へ</button>
+    </div>
+  </div>
+
+  <!-- 先頭に戻るボタン -->
+  <button id="scrollTopBtn" class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-700 opacity-80 hover:opacity-100 transition-opacity hidden">
+    ↑ トップへ
+  </button>
+
+  <script src="/js/deals.js"></script>
 </body>
 </html>
