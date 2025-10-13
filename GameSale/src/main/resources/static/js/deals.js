@@ -4,41 +4,42 @@ const itemsPerPage = 48;
 let totalFetched = 0;
 let hasMoreData = true;
 let selectedStores = [];
-let loading = false;
+let isFetching = false;
+let excludeDLC = false; // DLC除外設定
 
 const container = document.getElementById("dealsContainer");
-const fetchDealsBtn = document.getElementById("fetchDealsBtn");
 const prevBtn = document.getElementById("prevPage");
 const nextBtn = document.getElementById("nextPage");
 const scrollTopBtn = document.getElementById("scrollTopBtn");
+const fetchBtn = document.getElementById("fetchDealsBtn");
+const sortSelect = document.getElementById("sortSelect");
 
-// 「検索中…」メッセージ
-const loadingMessage = document.createElement("p");
-loadingMessage.textContent = "検索中…";
-loadingMessage.className = "text-center text-gray-600 mb-2 hidden";
-fetchDealsBtn.parentNode.insertBefore(loadingMessage, fetchDealsBtn.nextSibling);
+// ✅ DLC除外チェックボックス（初期状態も反映）
+const excludeDLCCheckbox = document.getElementById("excludeDLC");
+if (excludeDLCCheckbox) {
+  excludeDLC = excludeDLCCheckbox.checked; // ← 初期状態を反映
 
-fetchDealsBtn.addEventListener("click", async () => {
-  if (loading) return;
-  loading = true;
+  excludeDLCCheckbox.addEventListener("change", () => {
+    excludeDLC = excludeDLCCheckbox.checked;
+    renderPage();
+  });
+}
 
-  const originalText = fetchDealsBtn.textContent;
-  fetchDealsBtn.textContent = "検索中…";
-  fetchDealsBtn.disabled = true;
-  loadingMessage.classList.remove("hidden");
-
+document.getElementById("fetchDealsBtn").addEventListener("click", async () => {
   selectedStores = Array.from(document.querySelectorAll(".store-checkbox:checked"))
     .map(cb => cb.value)
     .join(",");
 
   if (!selectedStores) {
     alert("少なくとも1つのストアを選択してください。");
-    fetchDealsBtn.textContent = originalText;
-    fetchDealsBtn.disabled = false;
-    loadingMessage.classList.add("hidden");
-    loading = false;
     return;
   }
+
+  if (isFetching) return;
+
+  isFetching = true;
+  fetchBtn.disabled = true;
+  fetchBtn.textContent = "検索中...";
 
   dealsData = [];
   currentPage = 1;
@@ -48,40 +49,66 @@ fetchDealsBtn.addEventListener("click", async () => {
   await fetchMoreDeals();
   renderPage();
 
-  fetchDealsBtn.textContent = originalText;
-  fetchDealsBtn.disabled = false;
-  loadingMessage.classList.add("hidden");
-  loading = false;
+  fetchBtn.disabled = false;
+  fetchBtn.textContent = "セール情報を取得";
+  isFetching = false;
 });
 
 async function fetchMoreDeals() {
   if (!hasMoreData) return;
 
   const url = `/api/deals?stores=${selectedStores}&offset=${totalFetched}&limit=200`;
-  try {
-    const res = await fetch(url);
-    const newDeals = await res.json();
+  const res = await fetch(url);
+  const newDeals = await res.json();
 
-    if (!newDeals || newDeals.length === 0) {
-      hasMoreData = false;
-      return;
-    }
-
-    dealsData.push(...newDeals);
-    totalFetched += newDeals.length;
-    if (newDeals.length < 200) hasMoreData = false;
-  } catch (err) {
-    console.error("データ取得エラー:", err);
-    alert("データ取得中にエラーが発生しました。");
+  if (!newDeals || newDeals.length === 0) {
     hasMoreData = false;
+    return;
   }
+
+  dealsData.push(...newDeals);
+  totalFetched += newDeals.length;
+  if (newDeals.length < 200) hasMoreData = false;
+}
+
+// ✅ DLC判定（強化版）
+function isDLC(title) {
+  if (!title) return false;
+
+  const normalized = title
+    .toLowerCase()
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+    .replace(/\s+/g, "");
+
+  const dlcPatterns = [
+    /dlc/,
+    /soundtracks?/, // soundtrack / soundtracks 両対応
+    /ost/,
+    /seasonpass/,
+    /expansion/,
+    /upgrade/,
+    /addon/,
+    /add[-\s]?on/,
+    /pack/,
+    /bundle/,
+    /expansionpass/,
+    /パック/,
+    /拡張/,
+    /追加コンテンツ/,
+    /サウンドトラック/,
+    /オリジナルサウンドトラック/
+  ];
+
+  return dlcPatterns.some(pattern => pattern.test(normalized));
 }
 
 function renderPage() {
   container.innerHTML = "";
   const start = (currentPage - 1) * itemsPerPage;
   const end = start + itemsPerPage;
-  const pageItems = dealsData.slice(start, end);
+
+  let filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
+  const pageItems = filteredDeals.slice(start, end);
 
   pageItems.forEach((deal, index) => {
     const card = document.createElement("div");
@@ -106,12 +133,41 @@ function renderPage() {
     }, index * 10);
   });
 
-  const totalPages = Math.ceil(dealsData.length / itemsPerPage);
   prevBtn.disabled = currentPage === 1;
-  nextBtn.disabled = currentPage === totalPages && !hasMoreData;
+  nextBtn.disabled = currentPage === Math.ceil(filteredDeals.length / itemsPerPage) && !hasMoreData;
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
+
+// 並べ替え処理
+sortSelect.addEventListener("change", () => {
+  const value = sortSelect.value;
+  switch (value) {
+    case "priceNewAsc":
+      dealsData.sort((a, b) => a.priceNew - b.priceNew);
+      break;
+    case "priceNewDesc":
+      dealsData.sort((a, b) => b.priceNew - a.priceNew);
+      break;
+    case "cutDesc":
+      dealsData.sort((a, b) => b.cut - a.cut);
+      break;
+    case "cutAsc":
+      dealsData.sort((a, b) => a.cut - b.cut);
+      break;
+    case "priceOldAsc":
+      dealsData.sort((a, b) => a.priceOld - b.priceOld);
+      break;
+    case "priceOldDesc":
+      dealsData.sort((a, b) => b.priceOld - a.priceOld);
+      break;
+    default:
+      dealsData.sort((a, b) => 0);
+  }
+
+  currentPage = 1;
+  renderPage();
+});
 
 // ページ切り替え
 prevBtn.addEventListener("click", () => {
@@ -123,7 +179,6 @@ prevBtn.addEventListener("click", () => {
 
 nextBtn.addEventListener("click", async () => {
   const totalPages = Math.ceil(dealsData.length / itemsPerPage);
-
   if (currentPage < totalPages) {
     currentPage++;
     renderPage();

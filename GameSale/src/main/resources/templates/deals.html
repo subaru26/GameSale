@@ -10,7 +10,7 @@
   <div class="max-w-6xl mx-auto p-4">
     <h1 class="text-2xl font-bold mb-4">🎮 ゲームセール情報</h1>
 
-    <!-- ストア選択 -->
+    <!-- ストア選択と操作ボタン -->
     <div class="mb-4 flex flex-wrap gap-4 items-center">
       <label><input type="checkbox" class="store-checkbox" value="steam" checked> Steam</label>
       <label><input type="checkbox" class="store-checkbox" value="epic"> Epic Games</label>
@@ -18,9 +18,27 @@
       <label><input type="checkbox" class="store-checkbox" value="microsoft"> Microsoft Store</label>
       <label><input type="checkbox" class="store-checkbox" value="fanatical"> Fanatical</label>
 
-      <button id="fetchDealsBtn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      <!-- DLC除外チェック -->
+      <label class="ml-4">
+        <input type="checkbox" id="excludeDLC" checked> DLCなどを除外
+      </label>
+
+      <button 
+        id="fetchDealsBtn" 
+        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors">
         セール情報を取得
       </button>
+
+      <!-- 並べ替えセレクト -->
+      <select id="sortSelect" class="ml-auto bg-white border px-3 py-2 rounded shadow">
+        <option value="default">並べ替えなし</option>
+        <option value="priceNewAsc">セール価格：安い順</option>
+        <option value="priceNewDesc">セール価格：高い順</option>
+        <option value="cutDesc">割引率：高い順</option>
+        <option value="cutAsc">割引率：低い順</option>
+        <option value="priceOldAsc">通常価格：安い順</option>
+        <option value="priceOldDesc">通常価格：高い順</option>
+      </select>
     </div>
 
     <!-- 検索中メッセージ -->
@@ -34,16 +52,19 @@
     <!-- ページネーション -->
     <div id="pagination" class="flex justify-center items-center mt-4 gap-2">
       <button id="prevPage" class="bg-gray-300 text-gray-700 px-3 py-1 rounded disabled:opacity-50" disabled>前へ</button>
-<!--      <span id="pageInfo" class="mx-2">1 / 1</span>-->
+      <!-- ページ番号は非表示 -->
       <button id="nextPage" class="bg-gray-300 text-gray-700 px-3 py-1 rounded disabled:opacity-50">次へ</button>
     </div>
   </div>
 
   <!-- 先頭に戻るボタン -->
-  <button id="scrollTopBtn" class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-700 opacity-80 hover:opacity-100 transition-opacity hidden">
+  <button 
+    id="scrollTopBtn" 
+    class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-700 opacity-80 hover:opacity-100 transition-opacity hidden">
     ↑ トップへ
   </button>
 
+  <!-- JS -->
   <script src="/js/deals.js"></script>
 </body>
 </html>
