@@ -5,7 +5,8 @@ let totalFetched = 0;
 let hasMoreData = true;
 let selectedStores = [];
 let isFetching = false;
-let excludeDLC = false; // DLC除外設定
+let excludeDLC = false;
+let currentSort = "default"; // 現在のソート値
 
 const container = document.getElementById("dealsContainer");
 const prevBtn = document.getElementById("prevPage");
@@ -14,18 +15,17 @@ const scrollTopBtn = document.getElementById("scrollTopBtn");
 const fetchBtn = document.getElementById("fetchDealsBtn");
 const sortSelect = document.getElementById("sortSelect");
 
-// ✅ DLC除外チェックボックス（初期状態も反映）
 const excludeDLCCheckbox = document.getElementById("excludeDLC");
 if (excludeDLCCheckbox) {
-  excludeDLC = excludeDLCCheckbox.checked; // ← 初期状態を反映
-
+  excludeDLC = excludeDLCCheckbox.checked;
   excludeDLCCheckbox.addEventListener("change", () => {
     excludeDLC = excludeDLCCheckbox.checked;
+    currentPage = 1;
     renderPage();
   });
 }
 
-document.getElementById("fetchDealsBtn").addEventListener("click", async () => {
+fetchBtn.addEventListener("click", async () => {
   selectedStores = Array.from(document.querySelectorAll(".store-checkbox:checked"))
     .map(cb => cb.value)
     .join(",");
@@ -46,6 +46,9 @@ document.getElementById("fetchDealsBtn").addEventListener("click", async () => {
   totalFetched = 0;
   hasMoreData = true;
 
+  // 現在選択されているソート値を取得
+  currentSort = sortSelect.value || "default";
+
   await fetchMoreDeals();
   renderPage();
 
@@ -57,7 +60,20 @@ document.getElementById("fetchDealsBtn").addEventListener("click", async () => {
 async function fetchMoreDeals() {
   if (!hasMoreData) return;
 
-  const url = `/api/deals?stores=${selectedStores}&offset=${totalFetched}&limit=200`;
+  let sortParam = "default";
+
+  // API用のsortパラメータに変換
+  switch (currentSort) {
+    case "priceNewAsc": sortParam = "price"; break;
+    case "priceNewDesc": sortParam = "-price"; break;
+    case "cutDesc": sortParam = "-cut"; break;
+    case "cutAsc": sortParam = "cut"; break;
+    default: sortParam = "default"; break;
+  }
+
+  const url = `/api/deals?stores=${selectedStores}&offset=${totalFetched}&limit=200&sort=${sortParam}`;
+  console.log("[API] Fetching URL:", url); // ログ出力
+
   const res = await fetch(url);
   const newDeals = await res.json();
 
@@ -71,7 +87,6 @@ async function fetchMoreDeals() {
   if (newDeals.length < 200) hasMoreData = false;
 }
 
-// ✅ DLC判定（強化版）
 function isDLC(title) {
   if (!title) return false;
 
@@ -82,7 +97,7 @@ function isDLC(title) {
 
   const dlcPatterns = [
     /dlc/,
-    /soundtracks?/, // soundtrack / soundtracks 両対応
+    /soundtracks?/,
     /ost/,
     /seasonpass/,
     /expansion/,
@@ -104,16 +119,18 @@ function isDLC(title) {
 
 function renderPage() {
   container.innerHTML = "";
+
+  const filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
+  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+  if (currentPage > totalPages) currentPage = totalPages;
+
   const start = (currentPage - 1) * itemsPerPage;
   const end = start + itemsPerPage;
-
-  let filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
   const pageItems = filteredDeals.slice(start, end);
 
   pageItems.forEach((deal, index) => {
     const card = document.createElement("div");
     card.className = "bg-white p-4 rounded-lg shadow transition-opacity duration-500 opacity-0 translate-y-4";
-
     const img = deal.image ? deal.image : "/img/no-image.png";
 
     card.innerHTML = `
@@ -134,38 +151,19 @@ function renderPage() {
   });
 
   prevBtn.disabled = currentPage === 1;
-  nextBtn.disabled = currentPage === Math.ceil(filteredDeals.length / itemsPerPage) && !hasMoreData;
+  nextBtn.disabled = currentPage >= totalPages && !hasMoreData;
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// 並べ替え処理
-sortSelect.addEventListener("change", () => {
-  const value = sortSelect.value;
-  switch (value) {
-    case "priceNewAsc":
-      dealsData.sort((a, b) => a.priceNew - b.priceNew);
-      break;
-    case "priceNewDesc":
-      dealsData.sort((a, b) => b.priceNew - a.priceNew);
-      break;
-    case "cutDesc":
-      dealsData.sort((a, b) => b.cut - a.cut);
-      break;
-    case "cutAsc":
-      dealsData.sort((a, b) => a.cut - b.cut);
-      break;
-    case "priceOldAsc":
-      dealsData.sort((a, b) => a.priceOld - b.priceOld);
-      break;
-    case "priceOldDesc":
-      dealsData.sort((a, b) => b.priceOld - a.priceOld);
-      break;
-    default:
-      dealsData.sort((a, b) => 0);
-  }
-
+// ソート選択
+sortSelect.addEventListener("change", async () => {
+  currentSort = sortSelect.value || "default";
+  dealsData = [];
   currentPage = 1;
+  totalFetched = 0;
+  hasMoreData = true;
+  await fetchMoreDeals();
   renderPage();
 });
 
@@ -178,24 +176,27 @@ prevBtn.addEventListener("click", () => {
 });
 
 nextBtn.addEventListener("click", async () => {
-  const totalPages = Math.ceil(dealsData.length / itemsPerPage);
+  const filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
+  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+
   if (currentPage < totalPages) {
     currentPage++;
     renderPage();
   } else if (hasMoreData) {
     await fetchMoreDeals();
-    if ((currentPage * itemsPerPage) < dealsData.length) {
+    const newFiltered = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
+    const newTotalPages = Math.ceil(newFiltered.length / itemsPerPage);
+    if (currentPage < newTotalPages) {
       currentPage++;
       renderPage();
     }
   }
 });
 
-// 先頭に戻るボタン
+// スクロールトップ
 window.addEventListener("scroll", () => {
   scrollTopBtn.style.display = window.scrollY > 200 ? "block" : "none";
 });
-
 scrollTopBtn.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });

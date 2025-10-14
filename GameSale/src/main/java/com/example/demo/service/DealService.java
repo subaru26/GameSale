@@ -25,7 +25,7 @@ public class DealService {
         "fanatical", "6"
     );
 
-    public List<DealDto> fetchDeals(List<String> selectedStores, int offset, int limit) {
+    public List<DealDto> fetchDeals(List<String> selectedStores, int offset, int limit, String sort) {
         String shopsParam = selectedStores.stream()
                 .map(String::toLowerCase)
                 .map(SHOP_IDS::get)
@@ -33,11 +33,18 @@ public class DealService {
                 .reduce((a, b) -> a + "," + b)
                 .orElse("61"); // デフォルトSteam
 
+        // sortがnullまたは空の場合はパラメータを付けない
         String url = BASE_URL + "?key=" + API_KEY
                 + "&shops=" + shopsParam
                 + "&country=jp"
                 + "&offset=" + offset
                 + "&limit=" + limit;
+        if (sort != null && !sort.isEmpty() && !sort.equals("default")) {
+            url += "&sort=" + sort;
+        }
+
+        // サーバー側に出力
+        System.out.println("[API] Fetching URL: " + url);
 
         RestTemplate restTemplate = new RestTemplate();
         ApiDealResponse apiResponse = restTemplate.getForObject(url, ApiDealResponse.class);

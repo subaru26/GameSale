@@ -19,27 +19,20 @@ public class DealController {
     @Autowired
     private DealService dealService;
 
-    // ========================================
-    // HTML表示用
-    // /deals にアクセスしたときに templates/deals.html を返す
-    // ========================================
     @GetMapping("/deals")
     public String dealsPage(Model model) {
         return "deals";
-    }//けしちゃだめ
+    }
 
-    // ========================================
-    // JSON API（JavaScript用）
-    // ストア選択、ページ番号（offset/limit）を受け取る
-    // ========================================
     @GetMapping("/api/deals")
     @ResponseBody
     public List<DealDto> getDeals(
             @RequestParam(defaultValue = "steam") String stores,
             @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "48") int limit) {
+            @RequestParam(defaultValue = "48") int limit,
+            @RequestParam(defaultValue = "") String sort) {
 
         List<String> selectedStores = Arrays.asList(stores.split(","));
-        return dealService.fetchDeals(selectedStores, offset, limit);
+        return dealService.fetchDeals(selectedStores, offset, limit, sort);
     }
 }
