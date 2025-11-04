@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,19 @@
 </head>
 <body class="bg-gray-100 text-gray-800 relative">
   <div class="max-w-6xl mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-4">🎮 ゲームセール情報</h1>
+    <!-- ヘッダー部分 -->
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-2xl font-bold">🎮 ゲームセール情報</h1>
+
+      <!-- 👇 ログインユーザー情報表示 -->
+      <div class="flex items-center space-x-4">
+        <div class="text-sm text-gray-600">
+          <span th:text="'ようこそ、' + ${username} + ' さん！'"></span><br>
+          <span class="text-xs text-gray-500" th:text="'ユーザーID: ' + ${userid}"></span>
+        </div>
+        <a href="/logout" class="text-blue-600 hover:underline text-sm">ログアウト</a>
+      </div>
+    </div>
 
     <!-- ストア選択と操作ボタン -->
     <div class="mb-4 flex flex-wrap gap-4 items-center">
@@ -18,7 +30,6 @@
       <label><input type="checkbox" class="store-checkbox" value="microsoft"> Microsoft Store</label>
       <label><input type="checkbox" class="store-checkbox" value="fanatical"> Fanatical</label>
 
-      <!-- DLC除外チェック -->
       <label class="ml-4">
         <input type="checkbox" id="excludeDLC" checked> DLCなどを除外
       </label>
@@ -29,7 +40,6 @@
         セール情報を取得
       </button>
 
-      <!-- 並べ替えセレクト -->
       <select id="sortSelect" class="ml-auto bg-white border px-3 py-2 rounded shadow">
         <option value="default">並べ替えなし</option>
         <option value="priceNewAsc">セール価格：安い順</option>
@@ -41,29 +51,24 @@
       </select>
     </div>
 
-    <!-- 検索中メッセージ -->
     <div id="loadingMessage" class="text-center text-gray-500 my-4 hidden">
       🔄 検索中...
     </div>
 
-    <!-- カード表示 -->
     <div id="dealsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
 
-    <!-- ページネーション -->
     <div id="pagination" class="flex justify-center items-center mt-4 gap-2">
       <button id="prevPage" class="bg-gray-300 text-gray-700 px-3 py-1 rounded disabled:opacity-50" disabled>前へ</button>
       <button id="nextPage" class="bg-gray-300 text-gray-700 px-3 py-1 rounded disabled:opacity-50">次へ</button>
     </div>
   </div>
 
-  <!-- 先頭に戻るボタン -->
   <button 
     id="scrollTopBtn" 
     class="fixed bottom-6 right-6 bg-blue-600 text-white px-4 py-2 rounded shadow-lg hover:bg-blue-700 opacity-80 hover:opacity-100 transition-opacity hidden">
     ↑ トップへ
   </button>
 
-  <!-- JS -->
   <script src="/js/deals.js"></script>
 </body>
 </html>

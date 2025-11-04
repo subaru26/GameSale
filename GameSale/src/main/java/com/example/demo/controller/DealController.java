@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -13,14 +14,22 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.example.demo.dto.front.DealDto;
 import com.example.demo.service.DealService;
 
+import jakarta.servlet.http.HttpSession;
+
 @Controller
 public class DealController {
 
     @Autowired
-    private DealService dealService;
+    private DealService dealService;	
 
     @GetMapping("/deals")
-    public String dealsPage(Model model) {
+    public String dealsPage(HttpSession session, Model model) {
+        Map<String, String> user = (Map<String, String>) session.getAttribute("user");
+        if (user == null) {
+            return "redirect:/login"; // ログインしてない場合は /login に戻す
+        }
+        model.addAttribute("username", user.get("name"));
+        model.addAttribute("userid", user.get("id"));
         return "deals";
     }
 
@@ -30,8 +39,8 @@ public class DealController {
             @RequestParam(defaultValue = "steam") String stores,
             @RequestParam(defaultValue = "0") int offset,
             @RequestParam(defaultValue = "48") int limit,
-            @RequestParam(defaultValue = "") String sort) {
-
+            @RequestParam(defaultValue = "") String sort
+    ) {
         List<String> selectedStores = Arrays.asList(stores.split(","));
         return dealService.fetchDeals(selectedStores, offset, limit, sort);
     }
