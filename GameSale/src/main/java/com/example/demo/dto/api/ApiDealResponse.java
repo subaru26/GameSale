@@ -31,6 +31,12 @@ public class ApiDealResponse {
         private Price regular;
         private int cut;
         private String url;
+
+        // 過去最安値
+        private Price storeLow;       // 現在ストアでの最安値
+        private Price historyLow;     // 過去最安値
+        private Price historyLow_1y;  // 過去1年間の最安値
+        private Price historyLow_3m;  // 過去3か月の最安値
     }
 
     @Data
