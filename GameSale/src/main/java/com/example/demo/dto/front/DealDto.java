@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class DealDto {
+	private String gameID;
     private String title;
     private String shop;
     private double priceNew;

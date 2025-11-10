@@ -33,7 +33,6 @@ public class DealService {
                 .reduce((a, b) -> a + "," + b)
                 .orElse("61"); // デフォルトSteam
 
-        // sortがnullまたは空の場合はパラメータを付けない
         String url = BASE_URL + "?key=" + API_KEY
                 + "&shops=" + shopsParam
                 + "&country=jp"
@@ -43,7 +42,6 @@ public class DealService {
             url += "&sort=" + sort;
         }
 
-        // サーバー側に出力
         System.out.println("[API] Fetching URL: " + url);
 
         RestTemplate restTemplate = new RestTemplate();
@@ -54,6 +52,11 @@ public class DealService {
         if (apiResponse != null && apiResponse.getList() != null) {
             for (ApiDealResponse.ListItem item : apiResponse.getList()) {
                 DealDto dto = new DealDto();
+
+                // ✅ ゲームIDを保持（モーダルや詳細用）
+                dto.setGameID(item.getId());
+
+                // ✅ タイトル
                 dto.setTitle(item.getTitle());
 
                 if (item.getDeal() != null) {
@@ -62,6 +65,12 @@ public class DealService {
                     dto.setPriceOld(item.getDeal().getRegular() != null ? item.getDeal().getRegular().getAmount() : 0);
                     dto.setCut(item.getDeal().getCut());
                     dto.setUrl(item.getDeal().getUrl());
+
+                    // ✅ 過去最安値関連
+                    dto.setStoreLow(item.getDeal().getStoreLow() != null ? item.getDeal().getStoreLow().getAmount() : null);
+                    dto.setHistoryLow(item.getDeal().getHistoryLow() != null ? item.getDeal().getHistoryLow().getAmount() : null);
+                    dto.setHistoryLow1y(item.getDeal().getHistoryLow_1y() != null ? item.getDeal().getHistoryLow_1y().getAmount() : null);
+                    dto.setHistoryLow3m(item.getDeal().getHistoryLow_3m() != null ? item.getDeal().getHistoryLow_3m().getAmount() : null);
                 }
 
                 if (item.getAssets() != null) {
