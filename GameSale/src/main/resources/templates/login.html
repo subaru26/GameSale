@@ -2,53 +2,90 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>ログイン</title>
+    <title>ログイン | GameSale</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
             color: #fff;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
         }
-        form {
-            background: #1f1f1f;
-            padding: 2rem;
-            border-radius: 10px;
-            width: 300px;
+        .card {
+            background: rgba(20, 20, 20, 0.9);
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 340px;
+            box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
+            text-align: center;
+        }
+        h2 {
+            margin-bottom: 1.5rem;
+            color: #00aaff;
+            letter-spacing: 1px;
         }
         input {
             width: 100%;
             margin-bottom: 1rem;
-            padding: 0.5rem;
+            padding: 0.75rem;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
+            background-color: #2b2b2b;
+            color: #fff;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: 2px solid #00aaff;
         }
         button {
             width: 100%;
-            padding: 0.5rem;
+            padding: 0.75rem;
             background: #0078d4;
             border: none;
+            border-radius: 6px;
             color: white;
-            border-radius: 5px;
+            font-size: 1rem;
             cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #00aaff;
+            box-shadow: 0 0 10px #00aaff;
         }
         .error {
             color: #ff6666;
             margin-bottom: 1rem;
-            text-align: center;
+        }
+        p {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #bbb;
+        }
+        a {
+            color: #00aaff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <form th:action="@{/login}" method="post">
+    <div class="card">
         <h2>ログイン</h2>
-        <div th:if="${error}" class="error" th:text="${error}"></div>
-        <input type="text" name="email" placeholder="メールアドレス" required>
-        <input type="password" name="password" placeholder="パスワード" required>
-        <button type="submit">ログイン</button>
-    </form>
+        <form th:action="@{/login}" method="post">
+            <div th:if="${error}" class="error" th:text="${error}"></div>
+            <input type="text" name="email" placeholder="メールアドレス" required>
+            <input type="password" name="password" placeholder="パスワード" required>
+            <button type="submit">ログイン</button>
+        </form>
+        <p>
+            アカウントをお持ちでない方は
+            <a href="/register">新規登録</a>
+        </p>
+    </div>
 </body>
 </html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>新規登録 | GameSale</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: rgba(20, 20, 20, 0.95);
+            padding: 2.5rem;
+            border-radius: 12px;
+            width: 360px;
+            box-shadow: 0 0 30px rgba(0, 150, 255, 0.18);
+            text-align: center;
+        }
+        h2 {
+            margin-bottom: 1.25rem;
+            color: #00aaff;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        .input-group {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        input[type="text"], input[type="password"], input[type="email"] {
+            width: 100%;
+            padding: 0.75rem 3.2rem 0.75rem 0.75rem;
+            border: none;
+            border-radius: 6px;
+            background-color: #232323;
+            color: #fff;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        input:focus {
+            outline: 2px solid #00aaff;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            color: #00aaff;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 6px;
+        }
+        .toggle-password:hover {
+            background: rgba(0,170,255,0.06);
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(180deg,#0078d4,#005fa3);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: box-shadow .18s, transform .06s;
+        }
+        .submit-btn:hover {
+            box-shadow: 0 6px 18px rgba(0,170,255,0.18);
+        }
+        .error {
+            color: #ff7777;
+            margin-bottom: 0.8rem;
+            font-size: 0.95rem;
+        }
+        p.note {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+        }
+        a.link {
+            color: #00aaff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        a.link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>新規登録</h2>
+
+        <form id="registerForm" th:action="@{/register}" method="post" autocomplete="new-password" onsubmit="return validatePasswords()">
+            <div th:if="${error}" class="error" th:text="${error}"></div>
+            <div id="error-message" class="error" style="display:none;"></div>
+
+            <div class="input-group">
+                <input type="text" name="account_name" placeholder="表示名" required autocomplete="name">
+            </div>
+
+            <div class="input-group">
+                <input type="email" name="email" placeholder="メールアドレス" required autocomplete="email">
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="reg_password" name="password" placeholder="パスワード"
+                       required autocomplete="new-password"
+                       pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$"
+                       title="8〜16文字で英大文字・小文字・数字をすべて含めてください。">
+                <button type="button" class="toggle-password" aria-label="パスワードを表示" onclick="togglePassword('reg_password', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+
+            <div class="input-group">
+                <input type="password" id="reg_password_confirm" name="password_confirm" placeholder="パスワード（確認）" required autocomplete="new-password">
+                <button type="button" class="toggle-password" aria-label="パスワードを表示" onclick="togglePassword('reg_password_confirm', this)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+            </div>
+
+            <button class="submit-btn" type="submit">登録</button>
+        </form>
+
+        <p class="note">
+            すでにアカウントをお持ちの方は
+            <a class="link" href="/login">ログイン</a>
+        </p>
+    </div>
+
+    <script>
+        const SVG_EYE_OPEN = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+        const SVG_EYE_CLOSED = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.73 20.73 0 0 1 5.08-4.9"></path><path d="M1 1l22 22"></path></svg>';
+
+        function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.innerHTML = SVG_EYE_CLOSED;
+            } else {
+                input.type = 'password';
+                btn.innerHTML = SVG_EYE_OPEN;
+            }
+        }
+
+        function validatePasswords() {
+            const password = document.getElementById("reg_password").value;
+            const confirm = document.getElementById("reg_password_confirm").value;
+            const errorDiv = document.getElementById("error-message");
+            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,16}$/;
+
+            if (!regex.test(password)) {
+                errorDiv.textContent = "パスワードは8〜16文字で英大文字・小文字・数字をすべて含めてください。";
+                errorDiv.style.display = "block";
+                return false;
+            }
+            if (password !== confirm) {
+                errorDiv.textContent = "確認用パスワードが一致しません。";
+                errorDiv.style.display = "block";
+                return false;
+            }
+
+            errorDiv.style.display = "none";
+            return true;
+        }
+    </script>
+</body>
+</html>

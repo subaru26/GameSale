@@ -14,30 +14,25 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    /**
-     * Supabase上のユーザー認証を行う
-     * 
-     * @param email    入力されたメールアドレス
-     * @param password 入力されたパスワード（平文）
-     * @return 一致したユーザー、またはnull
-     */
+    // ログイン認証
     public User authenticate(String email, String password) {
-        try {
-            Optional<User> userOpt = userRepository.findByEmail(email);
-
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
-
-                // パスワード照合
-                if (user.getPassword() != null && user.getPassword().equals(password)) {
-                    return user;
-                }
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (user.getPassword().equals(password)) {
+                return user;
             }
-        } catch (Exception e) {
-            System.err.println("❌ 認証中にエラーが発生: " + e.getMessage());
-            e.printStackTrace();
         }
+        return null;
+    }
 
-        return null; // 認証失敗時はnullを返す
+    // 登録処理（SupabaseのusersテーブルにINSERTされる）
+    public void save(User user) {
+        userRepository.save(user);
+    }
+
+    // メールでユーザーを検索
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
     }
 }

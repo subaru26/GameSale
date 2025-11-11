@@ -1,19 +1,17 @@
 package com.example.demo.repository;
 
-import java.util.List;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Optional;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
-import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.entity.User;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Repository
 public class UserRepository {
@@ -24,32 +22,62 @@ public class UserRepository {
     @Value("${SUPABASE_KEY}")
     private String supabaseKey;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final HttpClient client = HttpClient.newHttpClient();
 
+    // メールアドレスでユーザーを検索
     public Optional<User> findByEmail(String email) {
-        // ✅ /rest/v1 はここで付ける（プロパティには含めない）
-        String url = supabaseUrl + "/rest/v1/users?email=eq." + email;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("apikey", supabaseKey);
-        headers.set("Authorization", "Bearer " + supabaseKey);
-        headers.set("Accept", "application/json");
-
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
         try {
-            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+            URI uri = new URI(supabaseUrl + "/rest/v1/users?email=eq." + email + "&select=*");
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
 
-            ObjectMapper mapper = new ObjectMapper();
-            List<User> users = mapper.readValue(response.getBody(), new TypeReference<List<User>>() {});
-            if (!users.isEmpty()) {
-                return Optional.of(users.get(0));
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            JSONArray array = new JSONArray(response.body());
+
+            if (array.isEmpty()) {
+                return Optional.empty();
             }
+
+            JSONObject obj = array.getJSONObject(0);
+            User user = new User();
+            user.setId(obj.getLong("id"));
+            user.setAccount_name(obj.optString("account_name"));
+            user.setEmail(obj.optString("email"));
+            user.setPassword(obj.optString("password"));
+            return Optional.of(user);
+
         } catch (Exception e) {
-            System.err.println("❌ Supabaseからユーザー取得時にエラー発生: " + e.getMessage());
+            e.printStackTrace();
+            return Optional.empty();
+        }
+    }
+
+    // 新規登録
+    public void save(User user) {
+        try {
+            URI uri = new URI(supabaseUrl + "/rest/v1/users");
+            JSONObject obj = new JSONObject();
+            obj.put("account_name", user.getAccount_name());
+            obj.put("email", user.getEmail());
+            obj.put("password", user.getPassword());
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(obj.toString()))
+                    .build();
+
+            client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
-
-        return Optional.empty();
     }
 }
