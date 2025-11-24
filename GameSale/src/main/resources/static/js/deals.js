@@ -60,14 +60,22 @@ async function fetchMoreDeals() {
   if (!hasMoreData) return;
 
   let sortParam = "default";
+
+  // ※ APIに渡す必要があるのは「セール価格」と「割引率」だけ
   switch (currentSort) {
     case "priceNewAsc": sortParam = "price"; break;
     case "priceNewDesc": sortParam = "-price"; break;
-    case "priceOldAsc": sortParam = "regular"; break;
-    case "priceOldDesc": sortParam = "-regular"; break;
-    case "cutDesc": sortParam = "-cut"; break;
     case "cutAsc": sortParam = "cut"; break;
-    default: sortParam = "default"; break;
+    case "cutDesc": sortParam = "-cut"; break;
+
+    // ▼ 通常価格は API に sort を渡さない
+    case "priceOldAsc":
+    case "priceOldDesc":
+      sortParam = "default";
+      break;
+
+    default:
+      sortParam = "default";
   }
 
   const url = `/api/deals?stores=${selectedStores}&offset=${totalFetched}&limit=200&sort=${sortParam}`;
@@ -88,26 +96,40 @@ async function fetchMoreDeals() {
 
 function isDLC(title) {
   if (!title) return false;
-
   const normalized = title
     .toLowerCase()
     .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
     .replace(/\s+/g, "");
-
   const dlcPatterns = [
-    /dlc/, /soundtracks?/, /ost/, /seasonpass/, /expansion/,
-    /upgrade/, /addon/, /add[-\s]?on/, /pack/, /bundle/,
-    /expansionpass/, /パック/, /拡張/, /追加コンテンツ/,
-    /サウンドトラック/, /オリジナルサウンドトラック/
+    /dlc/, /soundtracks?/, /ost/,
+    /seasonpass/, /expansion/,
+    /upgrade/, /addon/, /add[-\s]?on/,
+    /pack/, /bundle/,
+    /パック/, /拡張/, /追加コンテンツ/,
+    /サウンドトラック/
   ];
-
   return dlcPatterns.some(pattern => pattern.test(normalized));
+}
+
+function applyLocalSort(list) {
+  // 通常価格のみ JS でソート
+  switch (currentSort) {
+    case "priceOldAsc":
+      return list.sort((a, b) => (a.priceOld || 0) - (b.priceOld || 0));
+    case "priceOldDesc":
+      return list.sort((a, b) => (b.priceOld || 0) - (a.priceOld || 0));
+  }
+  return list;
 }
 
 function renderPage() {
   container.innerHTML = "";
 
-  const filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
+  let filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : [...dealsData];
+
+  // ▼ 通常価格順の時だけ JS でソート
+  filteredDeals = applyLocalSort(filteredDeals);
+
   const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
   if (currentPage > totalPages) currentPage = totalPages;
 
@@ -121,8 +143,8 @@ function renderPage() {
     card.dataset.gameId = deal.gameID || deal.id || deal.game?.id;
 
     const img = deal.image && deal.image.trim() !== ""
-  ? deal.image
-  : "https://placehold.co/400x185?text=No+Image";
+      ? deal.image
+      : "https://placehold.co/400x185?text=No+Image";
 
     card.innerHTML = `
       <img src="${img}" class="w-full rounded mb-2" alt="thumbnail">
@@ -134,13 +156,10 @@ function renderPage() {
     `;
     container.appendChild(card);
 
-    // ▼ カードクリックで詳細モーダル表示
+    // ▼ カードクリックでモーダル表示
     card.addEventListener("click", async () => {
       const gameId = card.dataset.gameId;
-      if (!gameId) {
-        console.warn("Game IDが不明です:", deal);
-        return;
-      }
+      if (!gameId) return;
 
       try {
         const modal = document.getElementById("gameModal");
@@ -153,32 +172,21 @@ function renderPage() {
         const res = await fetch(`/api/gameinfo?id=${gameId}`);
         const data = await res.json();
 
-        // 💬 ストアURLをリンク風で表示
         const storeLink = deal.url
           ? `<a href="${deal.url}" target="_blank" class="text-blue-600 hover:underline inline-block mt-3">ストアで見る →</a>`
           : "";
 
         modalContent.innerHTML = `
-          <img src="${data.assets?.banner400 || deal.image || 'https://placehold.co/600x120?text=No+Image'}" 
-               alt="${data.title}" 
-               class="rounded-lg w-full mb-3">
+          <img src="${data.assets?.banner400 || deal.image}" class="rounded-lg w-full mb-3">
           <h2 class="text-xl font-bold">${data.title}</h2>
-          <p class="text-sm text-gray-600 mb-2">発売日: ${data.releaseDate || '不明'}</p>
-          <p class="text-sm text-gray-600 mb-2">パブリッシャー: ${
-            data.publishers?.map(p => p.name).join(', ') || '不明'
-          }</p>
           <div class="bg-gray-50 p-3 rounded mt-3 text-sm">
             <p>💰 現在価格: ${deal.priceNew}円 (${deal.cut}%OFF)</p>
             <p>💵 通常価格: ${deal.priceOld}円</p>
             <p>🕒 過去最安値: ${deal.historyLow || '不明'}円</p>
-            <p>📉 1年内最安値: ${deal.historyLow1y || '不明'}円</p>
-            <p>🪙 3か月内最安値: ${deal.historyLow3m || '不明'}円</p>
           </div>
           ${storeLink}
         `;
-      } catch (error) {
-        console.error("モーダル情報取得エラー:", error);
-      }
+      } catch (err) { }
     });
 
     setTimeout(() => {
@@ -192,18 +200,19 @@ function renderPage() {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ソート選択変更
+// ▼ ソート選択時
 sortSelect.addEventListener("change", async () => {
   currentSort = sortSelect.value || "default";
   dealsData = [];
   currentPage = 1;
   totalFetched = 0;
   hasMoreData = true;
+
   await fetchMoreDeals();
   renderPage();
 });
 
-// ページ切り替え
+// ▼ ページ変更
 prevBtn.addEventListener("click", () => {
   if (currentPage > 1) {
     currentPage--;
@@ -212,7 +221,9 @@ prevBtn.addEventListener("click", () => {
 });
 
 nextBtn.addEventListener("click", async () => {
-  const filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
+  let filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : [...dealsData];
+  filteredDeals = applyLocalSort(filteredDeals);
+
   const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
 
   if (currentPage < totalPages) {
@@ -220,24 +231,20 @@ nextBtn.addEventListener("click", async () => {
     renderPage();
   } else if (hasMoreData) {
     await fetchMoreDeals();
-    const newFiltered = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : dealsData;
-    const newTotalPages = Math.ceil(newFiltered.length / itemsPerPage);
-    if (currentPage < newTotalPages) {
-      currentPage++;
-      renderPage();
-    }
+    renderPage();
   }
 });
 
-// スクロールトップ
+// トップへ戻る
 window.addEventListener("scroll", () => {
   scrollTopBtn.style.display = window.scrollY > 200 ? "block" : "none";
 });
+
 scrollTopBtn.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
-// ▼ モーダル閉じる
+// モーダル
 const modal = document.getElementById("gameModal");
 const closeModal = document.getElementById("closeModal");
 

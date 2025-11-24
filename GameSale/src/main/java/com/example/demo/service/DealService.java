@@ -26,6 +26,7 @@ public class DealService {
     );
 
     public List<DealDto> fetchDeals(List<String> selectedStores, int offset, int limit, String sort) {
+
         String shopsParam = selectedStores.stream()
                 .map(String::toLowerCase)
                 .map(SHOP_IDS::get)
@@ -38,7 +39,12 @@ public class DealService {
                 + "&country=jp"
                 + "&offset=" + offset
                 + "&limit=" + limit;
-        if (sort != null && !sort.isEmpty() && !sort.equals("default")) {
+
+        // 🔧 通常価格順（regular）の場合は sort を付けない
+        if (sort != null 
+                && !sort.isEmpty() 
+                && !sort.equals("default")
+                && !sort.equals("regular")) {
             url += "&sort=" + sort;
         }
 
@@ -53,10 +59,7 @@ public class DealService {
             for (ApiDealResponse.ListItem item : apiResponse.getList()) {
                 DealDto dto = new DealDto();
 
-                // ✅ ゲームIDを保持（モーダルや詳細用）
                 dto.setGameID(item.getId());
-
-                // ✅ タイトル
                 dto.setTitle(item.getTitle());
 
                 if (item.getDeal() != null) {
@@ -66,7 +69,6 @@ public class DealService {
                     dto.setCut(item.getDeal().getCut());
                     dto.setUrl(item.getDeal().getUrl());
 
-                    // ✅ 過去最安値関連
                     dto.setStoreLow(item.getDeal().getStoreLow() != null ? item.getDeal().getStoreLow().getAmount() : null);
                     dto.setHistoryLow(item.getDeal().getHistoryLow() != null ? item.getDeal().getHistoryLow().getAmount() : null);
                     dto.setHistoryLow1y(item.getDeal().getHistoryLow_1y() != null ? item.getDeal().getHistoryLow_1y().getAmount() : null);
