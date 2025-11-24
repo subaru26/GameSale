@@ -2,90 +2,146 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>ログイン | GameSale</title>
+    <title>ログイン - GameSale</title>
+
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        body { 
+            font-family: sans-serif; 
+            background: #0e0e0e; 
+            color: white; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
             margin: 0;
         }
-        .card {
-            background: rgba(20, 20, 20, 0.9);
-            padding: 2.5rem;
-            border-radius: 12px;
-            width: 340px;
-            box-shadow: 0 0 20px rgba(0, 150, 255, 0.3);
-            text-align: center;
+
+        .card { 
+            background: #1e1e1e; 
+            padding: 2rem; 
+            border-radius: 12px; 
+            width: 350px; 
+            box-sizing: border-box;
         }
-        h2 {
-            margin-bottom: 1.5rem;
-            color: #00aaff;
-            letter-spacing: 1px;
-        }
+
         input {
-            width: 100%;
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            border: none;
-            border-radius: 6px;
-            background-color: #2b2b2b;
-            color: #fff;
-            font-size: 1rem;
+            width: 100%; 
+            padding: 10px 40px 10px 10px; /* 右側にアイコン分の余白 */
+            margin-top: 1rem; 
+            border-radius: 6px; 
+            border: 1px solid #333; 
+            background: #0f0f0f; 
+            color: #fff; 
+            box-sizing: border-box;
+            height: 40px; /* アイコンと揃える */
+            font-size: 16px;
         }
-        input:focus {
-            outline: 2px solid #00aaff;
+
+        .pw-wrap {
+            position: relative;
+            display: flex;
+            align-items: center; /* 入力欄とアイコンを縦中央に揃える */
         }
-        button {
-            width: 100%;
-            padding: 0.75rem;
-            background: #0078d4;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            font-size: 1rem;
+
+        .pw-eye {
+            position: absolute;
+            right: 10px;
+            top: 65%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
             cursor: pointer;
-            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        button:hover {
-            background: #00aaff;
-            box-shadow: 0 0 10px #00aaff;
+
+        .pw-eye svg {
+            width: 22px;
+            height: 22px;
+            stroke: #bbb;
+            fill: none;
         }
-        .error {
-            color: #ff6666;
-            margin-bottom: 1rem;
+
+        .pw-eye:hover svg {
+            stroke: #fff;
         }
-        p {
+
+        button { 
+            width: 100%; 
+            padding: 0.7rem; 
+            margin-top: 1rem; 
+            border-radius: 6px; 
+            background: #0078d4; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 16px;
+        }
+
+        .error { 
+            color: #ff6666; 
+            margin-top: 0.5rem;
+        }
+
+        a { 
+            color: #00aaff; 
+            text-decoration: none; 
+        }
+
+        form > * + * {
             margin-top: 1rem;
-            font-size: 0.9rem;
-            color: #bbb;
-        }
-        a {
-            color: #00aaff;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
         }
     </style>
 </head>
+
 <body>
-    <div class="card">
-        <h2>ログイン</h2>
-        <form th:action="@{/login}" method="post">
-            <div th:if="${error}" class="error" th:text="${error}"></div>
-            <input type="text" name="email" placeholder="メールアドレス" required>
-            <input type="password" name="password" placeholder="パスワード" required>
-            <button type="submit">ログイン</button>
-        </form>
-        <p>
-            アカウントをお持ちでない方は
-            <a href="/register">新規登録</a>
-        </p>
-    </div>
+<div class="card">
+    <h2>ログイン</h2>
+
+    <form th:action="@{/login}" method="post">
+        <div th:if="${error}" class="error" th:text="${error}"></div>
+
+        <input type="email" name="email" placeholder="メールアドレス" required>
+
+        <!-- パスワード -->
+        <div class="pw-wrap">
+            <input type="password" id="password" name="password" placeholder="パスワード" required>
+            <span class="pw-eye" onclick="togglePassword('password')">
+                <svg viewBox="0 0 24 24">
+                    <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+            </span>
+        </div>
+
+        <button type="submit">ログイン</button>
+    </form>
+
+    <p style="margin-top: 1rem;">
+        <a href="/register">新規登録はこちら</a>
+    </p>
+</div>
+
+<script>
+function togglePassword(id) {
+    const input = document.getElementById(id);
+    const span = input.nextElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        span.innerHTML = `<svg viewBox="0 0 24 24">
+            <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5C5.5 19.5 1.5 12 1.5 12c1.48-2.72 4.1-5.19 7.4-6.53"></path>
+            <path d="M3 3l18 18"></path>
+        </svg>`;
+    } else {
+        input.type = 'password';
+        span.innerHTML = `<svg viewBox="0 0 24 24">
+            <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+        </svg>`;
+    }
+}
+</script>
+
 </body>
 </html>
