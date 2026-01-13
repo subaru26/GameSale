@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>GAME VAULT - 新規登録</title>
+
+    <style>
+        /* スクロールバーのデザイン（細くして目立たなくする） */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0e27;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 212, 255, 0.2);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 212, 255, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            position: relative;
+            /* 【修正】横スクロール禁止、縦のみ自動。上下に余裕を持たせる */
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: 40px 0;
+        }
+
+        /* 背景アニメーションが横幅に影響しないよう fixed で固定 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(138, 43, 226, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 20%, rgba(255, 0, 128, 0.05) 0%, transparent 50%);
+            animation: backgroundFloat 15s ease-in-out infinite alternate;
+            z-index: -1;
+        }
+
+        @keyframes backgroundFloat {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, #00d4ff 0%, #9333ea 50%, #ff0080 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 10px rgba(0, 212, 255, 0.5); }
+            to { text-shadow: 0 0 20px rgba(0, 212, 255, 0.8); }
+        }
+
+        .card {
+            background: rgba(15, 20, 40, 0.95);
+            backdrop-filter: blur(15px);
+            padding: 2.5rem;
+            border-radius: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            animation: slideUp 0.8s ease-out 0.2s both;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            color: #fff;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 45px 14px 16px;
+            font-size: 15px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            background: rgba(10, 14, 39, 0.6);
+            color: #fff;
+            box-sizing: border-box;
+            height: 50px;
+            transition: all 0.3s ease;
+            /* 【修正】input側のマージンを削除 */
+            margin-top: 0;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.2);
+        }
+
+        .pw-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            /* 【修正】入力欄同士の間隔をここで確保し、アイコンの位置ズレを防ぐ */
+            margin-top: 1.2rem;
+        }
+
+        .pw-eye {
+            position: absolute;
+            right: 14px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+        }
+
+        .pw-eye svg {
+            width: 22px;
+            height: 22px;
+            stroke: rgba(0, 212, 255, 0.6);
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            margin-top: 2rem;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #00d4ff 0%, #0096ff 100%);
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 1px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .error {
+            color: #ff4757;
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .pw-note {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 0.5rem;
+        }
+
+        .pw-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 0.8rem;
+            font-size: 12px;
+        }
+
+        .valid { color: #00ff88; }
+        .invalid { color: rgba(255, 71, 87, 0.8); }
+
+        .login-link {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .back-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 0.5rem;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo-container">
+        <div class="logo">GAME VAULT</div>
+    </div>
+
+    <div class="card">
+        <h2>新規会員登録</h2>
+
+        <form th:action="@{/register}" method="post">
+            <div class="error" th:if="${error}" th:text="${error}"></div>
+
+            <div style="margin-top: 0;">
+                <input type="text" name="account_name" placeholder="👤 アカウント名" th:value="${account_name}" required>
+            </div>
+
+            <div style="margin-top: 1.2rem;">
+                <input type="email" name="email" placeholder="📧 メールアドレス" th:value="${email}" required>
+            </div>
+
+            <div class="pw-wrap">
+                <input type="password" id="password" name="password" placeholder="🔒 パスワード" required>
+                <span class="pw-eye" onclick="togglePassword('password')">
+                    <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
+            
+            <div class="pw-checklist">
+                <span id="chk-uppercase" class="invalid">❌ 大文字を含む</span>
+                <span id="chk-lowercase" class="invalid">❌ 小文字を含む</span>
+                <span id="chk-number" class="invalid">❌ 数字を含む</span>
+            </div>
+
+            <div class="pw-wrap">
+                <input type="password" id="password_confirm" name="password_confirm" placeholder="🔒 パスワード（確認用）" required>
+                <span class="pw-eye" onclick="togglePassword('password_confirm')">
+                    <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </span>
+            </div>
+
+            <button class="submit-btn" type="submit">認証コードを送信</button>
+            <div class="error" id="submit-error" style="display:none; margin-top: 1rem;"></div>
+        </form>
+
+        <div class="login-link">
+            <a th:href="@{/login}">
+                <button type="button" class="back-btn">← ログイン画面に戻る</button>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // パスワード表示切り替え
+    function togglePassword(id) {
+        const input = document.getElementById(id);
+        const span = input.nextElementSibling;
+        if (input.type === 'password') {
+            input.type = 'text';
+            span.innerHTML = `<svg viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+        } else {
+            input.type = 'password';
+            span.innerHTML = `<svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+        }
+    }
+
+    // 強度チェック
+    const passwordInput = document.getElementById('password');
+    const chkUpper = document.getElementById('chk-uppercase');
+    const chkLower = document.getElementById('chk-lowercase');
+    const chkNumber = document.getElementById('chk-number');
+
+    passwordInput.addEventListener('input', function() {
+        const val = passwordInput.value;
+        chkUpper.textContent = /[A-Z]/.test(val) ? '✅ 大文字を含む' : '❌ 大文字を含む';
+        chkUpper.className = /[A-Z]/.test(val) ? 'valid' : 'invalid';
+        chkLower.textContent = /[a-z]/.test(val) ? '✅ 小文字を含む' : '❌ 小文字を含む';
+        chkLower.className = /[a-z]/.test(val) ? 'valid' : 'invalid';
+        chkNumber.textContent = /\d/.test(val) ? '✅ 数字を含む' : '❌ 数字を含む';
+        chkNumber.className = /\d/.test(val) ? 'valid' : 'invalid';
+    });
+
+    // 送信バリデーション
+    document.querySelector('form').addEventListener('submit', function(event) {
+        const password = document.getElementById('password').value;
+        const passwordConfirm = document.getElementById('password_confirm').value;
+        const submitErrorDiv = document.getElementById('submit-error');
+        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/;
+
+        let messages = [];
+        if (password.length < 8) messages.push("パスワードは8文字以上必要です。");
+        if (!pattern.test(password)) messages.push("大文字・小文字・数字をすべて含めてください。");
+        if (password !== passwordConfirm) messages.push("確認用パスワードが一致しません。");
+
+        if (messages.length > 0) {
+            event.preventDefault();
+            submitErrorDiv.style.display = 'block';
+            submitErrorDiv.innerHTML = messages.join('<br>');
+        } else {
+            submitErrorDiv.style.display = 'none';
+        }
+    });
+</script>
+
+</body>
+</html>

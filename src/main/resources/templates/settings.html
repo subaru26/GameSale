@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAME VAULT - 設定</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* 【修正】スクロールバーを細くし、デザインに馴染ませる */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.2);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 212, 255, 0.5);
+    }
+
+    body {
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1629 100%);
+      min-height: 100vh;
+      /* 【修正】横スクロールを完全に禁止し、縦のみ許可 */
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+    
+    /* ライトモード時の背景色 */
+    body.light-mode {
+      background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 50%, #e6eef5 100%);
+    }
+    
+    .neon-border {
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+    }
+    
+    .light-mode .neon-border {
+      border: 1px solid rgba(0, 150, 255, 0.2);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .pw-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .pw-eye {
+      position: absolute;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pw-eye svg {
+      width: 22px;
+      height: 22px;
+      stroke: #bbb;
+      fill: none;
+    }
+    .pw-eye:hover svg {
+      stroke: #00d4ff;
+    }
+  </style>
+</head>
+<body th:classappend="${darkMode != null and !darkMode} ? 'light-mode' : ''" 
+      th:class="${darkMode != null and !darkMode} ? 'bg-gray-50 text-gray-800' : 'bg-gray-900 text-gray-100'">
+  
+  <div class="max-w-4xl mx-auto p-4">
+    <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl p-6 mb-6 neon-border">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+            ⚙️ GAME VAULT
+          </h1>
+          <p th:classappend="${darkMode != null and darkMode} ? 'text-gray-400' : 'text-gray-600'" class="text-sm mt-1">設定</p>
+        </div>
+        <div class="flex gap-2">
+          <a href="/deals" 
+             th:classappend="${darkMode != null and darkMode} ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-600 hover:bg-blue-700'"
+             class="text-white px-4 py-2 rounded-lg transition-colors">🎮 セール一覧</a>
+          <a href="/wishlist" 
+             th:classappend="${darkMode != null and darkMode} ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-yellow-500 hover:bg-yellow-600'"
+             class="text-white px-4 py-2 rounded-lg transition-colors">📋 ウィッシュリスト</a>
+          <a href="/logout" 
+             th:classappend="${darkMode != null and darkMode} ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-800'"
+             class="hover:underline px-4 py-2">ログアウト</a>
+        </div>
+      </div>
+    </div>
+
+    <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl shadow-lg p-6 mb-4 neon-border">
+      <h2 class="text-xl font-semibold mb-4">👤 ユーザー名変更</h2>
+      <form id="usernameForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">現在のユーザー名</label>
+          <input type="text" 
+                 th:value="${username}" 
+                 th:classappend="${darkMode != null and darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-gray-100 border-gray-300'"
+                 class="w-full px-4 py-2 border rounded" 
+                 disabled>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">新しいユーザー名</label>
+          <input type="text" 
+                 id="newUsername" 
+                 name="newUsername" 
+                 th:classappend="${darkMode != null and darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'"
+                 class="w-full px-4 py-2 border rounded" 
+                 required>
+        </div>
+        <button type="submit" 
+                class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">変更</button>
+        <div id="usernameMessage" class="text-sm hidden mt-2"></div>
+      </form>
+    </div>
+
+    <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl shadow-lg p-6 mb-4 neon-border">
+      <h2 class="text-xl font-semibold mb-4">🔒 パスワード変更</h2>
+      <form id="passwordForm" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">現在のパスワード</label>
+          <div class="pw-wrap">
+            <input type="password" 
+                   id="currentPassword" 
+                   name="currentPassword" 
+                   th:classappend="${darkMode != null and darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'"
+                   class="w-full px-4 py-2 pr-12 border rounded" 
+                   required>
+            <span class="pw-eye" onclick="togglePassword('currentPassword')">
+              <svg viewBox="0 0 24 24">
+                <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </span>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-2">新しいパスワード</label>
+          <div class="pw-wrap">
+            <input type="password" 
+                   id="newPassword" 
+                   name="newPassword" 
+                   th:classappend="${darkMode != null and darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'"
+                   class="w-full px-4 py-2 pr-12 border rounded" 
+                   required>
+            <span class="pw-eye" onclick="togglePassword('newPassword')">
+              <svg viewBox="0 0 24 24">
+                <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </span>
+          </div>
+          <p th:classappend="${darkMode != null and darkMode} ? 'text-gray-400' : 'text-gray-500'" 
+             class="text-xs mt-1">8文字以上、大文字・小文字・数字を含む</p>
+          
+          <div class="text-xs mt-2 space-y-1">
+            <div id="chk-length" class="text-red-500">❌ 8文字以上</div>
+            <div id="chk-uppercase" class="text-red-500">❌ 大文字を含む</div>
+            <div id="chk-lowercase" class="text-red-500">❌ 小文字を含む</div>
+            <div id="chk-number" class="text-red-500">❌ 数字を含む</div>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-2">新しいパスワード（確認）</label>
+          <div class="pw-wrap">
+            <input type="password" 
+                   id="confirmPassword" 
+                   name="confirmPassword" 
+                   th:classappend="${darkMode != null and darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100' : 'bg-white border-gray-300'"
+                   class="w-full px-4 py-2 pr-12 border rounded" 
+                   required>
+            <span class="pw-eye" onclick="togglePassword('confirmPassword')">
+              <svg viewBox="0 0 24 24">
+                <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </span>
+          </div>
+          <div id="chk-match" class="text-xs mt-1 hidden"></div>
+        </div>
+        
+        <button type="submit" 
+                class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors">変更</button>
+        <div id="passwordMessage" class="text-sm hidden mt-2"></div>
+      </form>
+    </div>
+
+    <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl shadow-lg p-6 mb-4 neon-border">
+      <h2 class="text-xl font-semibold mb-4">🌙 表示設定</h2>
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-medium">ライトモード</p>
+          <p th:classappend="${darkMode != null and darkMode} ? 'text-gray-400' : 'text-gray-600'" 
+             class="text-sm">画面を明るい背景に切り替えます</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="darkModeToggle" th:checked="${darkMode != null and !darkMode}" class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
+      <div id="darkModeMessage" class="text-sm mt-3 hidden"></div>
+    </div>
+
+    <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl shadow-lg p-6 neon-border">
+      <h2 class="text-xl font-semibold mb-4">📧 アカウント情報</h2>
+      <div class="space-y-2">
+        <p><span class="font-medium">ユーザーID:</span> <span th:text="${userid}"></span></p>
+        <p><span class="font-medium">メールアドレス:</span> <span th:text="${email}"></span></p>
+        <p th:classappend="${darkMode != null and darkMode} ? 'text-gray-400' : 'text-gray-500'" 
+           class="text-sm">※メールアドレスは変更できません</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // パスワード表示切り替え
+    function togglePassword(id) {
+      const input = document.getElementById(id);
+      const span = input.nextElementSibling;
+      if (input.type === 'password') {
+        input.type = 'text';
+        span.innerHTML = `<svg viewBox="0 0 24 24">
+          <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5C5.5 19.5 1.5 12 1.5 12c1.48-2.72 4.1-5.19 7.4-6.53"></path>
+          <path d="M3 3l18 18"></path>
+        </svg>`;
+      } else {
+        input.type = 'password';
+        span.innerHTML = `<svg viewBox="0 0 24 24">
+          <path d="M1.5 12s4-7.5 10.5-7.5S22.5 12 22.5 12s-4 7.5-10.5 7.5S1.5 12 1.5 12z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>`;
+      }
+    }
+
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const chkLength = document.getElementById('chk-length');
+    const chkUpper = document.getElementById('chk-uppercase');
+    const chkLower = document.getElementById('chk-lowercase');
+    const chkNumber = document.getElementById('chk-number');
+    const chkMatch = document.getElementById('chk-match');
+
+    newPasswordInput.addEventListener('input', function() {
+      const val = newPasswordInput.value;
+      chkLength.textContent = val.length >= 8 ? '✅ 8文字以上' : '❌ 8文字以上';
+      chkLength.className = val.length >= 8 ? 'text-green-500' : 'text-red-500';
+      chkUpper.textContent = /[A-Z]/.test(val) ? '✅ 大文字を含む' : '❌ 大文字を含む';
+      chkUpper.className = /[A-Z]/.test(val) ? 'text-green-500' : 'text-red-500';
+      chkLower.textContent = /[a-z]/.test(val) ? '✅ 小文字を含む' : '❌ 小文字を含む';
+      chkLower.className = /[a-z]/.test(val) ? 'text-green-500' : 'text-red-500';
+      chkNumber.textContent = /\d/.test(val) ? '✅ 数字を含む' : '❌ 数字を含む';
+      chkNumber.className = /\d/.test(val) ? 'text-green-500' : 'text-red-500';
+      checkPasswordMatch();
+    });
+
+    confirmPasswordInput.addEventListener('input', checkPasswordMatch);
+
+    function checkPasswordMatch() {
+      const newPw = newPasswordInput.value;
+      const confirmPw = confirmPasswordInput.value;
+      if (confirmPw === '') { chkMatch.classList.add('hidden'); return; }
+      chkMatch.classList.remove('hidden');
+      if (newPw === confirmPw) {
+        chkMatch.textContent = '✅ パスワードが一致しています';
+        chkMatch.className = 'text-xs mt-1 text-green-500';
+      } else {
+        chkMatch.textContent = '❌ パスワードが一致しません';
+        chkMatch.className = 'text-xs mt-1 text-red-500';
+      }
+    }
+
+    // ユーザー名変更
+    document.getElementById('usernameForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newUsername = document.getElementById('newUsername').value;
+      const messageDiv = document.getElementById('usernameMessage');
+      try {
+        const res = await fetch('/api/settings/username', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ newUsername })
+        });
+        const result = await res.json();
+        messageDiv.classList.remove('hidden', 'text-red-600', 'text-green-600');
+        messageDiv.classList.add(result.success ? 'text-green-600' : 'text-red-600');
+        messageDiv.textContent = result.message;
+        if (result.success) setTimeout(() => location.reload(), 1000);
+      } catch (err) {
+        messageDiv.classList.remove('hidden');
+        messageDiv.classList.add('text-red-600');
+        messageDiv.textContent = 'エラーが発生しました';
+      }
+    });
+
+    // パスワード変更
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const messageDiv = document.getElementById('passwordMessage');
+      if (!newPassword.match(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)) {
+        messageDiv.textContent = '条件を満たしていません'; return;
+      }
+      try {
+        const res = await fetch('/api/settings/password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ currentPassword, newPassword, confirmPassword })
+        });
+        const result = await res.json();
+        messageDiv.classList.remove('hidden', 'text-red-600', 'text-green-600');
+        messageDiv.classList.add(result.success ? 'text-green-600' : 'text-red-600');
+        messageDiv.textContent = result.message;
+        if (result.success) document.getElementById('passwordForm').reset();
+      } catch (err) {
+        messageDiv.classList.remove('hidden');
+        messageDiv.textContent = 'エラーが発生しました';
+      }
+    });
+
+    // 表示設定切り替え
+document.getElementById('darkModeToggle').addEventListener('change', async (e) => {
+  const isLightModeChecked = e.target.checked;
+const darkModeValueForDB = isLightModeChecked; 
+
+  try {
+    const res = await fetch('/api/settings/darkmode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ darkMode: darkModeValueForDB })
+    });
+        const result = await res.json();
+        if (result.success) setTimeout(() => location.reload(), 500);
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>

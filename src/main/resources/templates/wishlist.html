@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAME VAULT - ウィッシュリスト</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1629 100%);
+      min-height: 100vh;
+    }
+    
+    body.light-mode {
+      background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 50%, #e6eef5 100%);
+    }
+    
+    .neon-border {
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+    }
+    
+    .light-mode .neon-border {
+      border: 1px solid rgba(0, 150, 255, 0.2);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body th:classappend="${!darkMode} ? 'light-mode' : ''" th:class="${darkMode} ? 'text-gray-100' : 'text-gray-800'">
+  <div class="max-w-7xl mx-auto p-4">
+    <!-- ヘッダー部分 -->
+    <div th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl p-6 mb-6 neon-border">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+            📋 GAME VAULT
+          </h1>
+          <p th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" class="text-sm mt-1">マイウィッシュリスト</p>
+        </div>
+
+        <!-- ナビゲーション -->
+        <div class="flex items-center space-x-3">
+          <a href="/deals" 
+             th:classappend="${darkMode} ? 'bg-blue-700 hover:bg-blue-600' : 'bg-blue-600 hover:bg-blue-700'"
+             class="text-white px-4 py-2 rounded-lg transition-all shadow-lg">
+            🎮 セール一覧へ
+          </a>
+          <a href="/settings" 
+             th:classappend="${darkMode} ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400 text-gray-800'"
+             class="px-4 py-2 rounded-lg transition-all">
+            ⚙️ 設定
+          </a>
+          <div th:classappend="${darkMode} ? 'text-gray-300' : 'text-gray-700'" class="text-sm text-right">
+            <span th:text="'ようこそ、' + ${username} + ' さん！'"></span><br>
+            <span th:classappend="${darkMode} ? 'text-gray-500' : 'text-gray-500'" class="text-xs" th:text="'ID: ' + ${userid}"></span>
+          </div>
+          <a href="/logout" 
+             th:classappend="${darkMode} ? 'text-cyan-400 hover:text-cyan-300' : 'text-blue-600 hover:text-blue-800'"
+             class="hover:underline text-sm">ログアウト</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ウィッシュリストが空の場合 -->
+    <div th:if="${#lists.isEmpty(wishlistItems)}" 
+         th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl p-12 text-center neon-border">
+      <div class="text-6xl mb-4">📭</div>
+      <p th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
+         class="text-xl mb-6">ウィッシュリストにアイテムがありません</p>
+      <a href="/deals" 
+         th:classappend="${darkMode} ? 'bg-gradient-to-r from-cyan-500 to-blue-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'"
+         class="text-white px-8 py-4 rounded-lg inline-block transition-all shadow-lg hover:shadow-xl font-semibold">
+        🎮 セール情報を見る
+      </a>
+    </div>
+
+    <!-- ウィッシュリスト表示 -->
+    <div th:if="${!#lists.isEmpty(wishlistItems)}" 
+         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      
+      <div th:each="item : ${wishlistItems}" 
+           th:classappend="${darkMode} ? 'bg-gray-800/80 hover:bg-gray-700/80 border border-cyan-500/20' : 'bg-white hover:shadow-2xl border border-blue-200'"
+           class="rounded-2xl shadow-lg transition-all relative overflow-hidden group backdrop-blur-sm">
+        
+        <!-- 削除ボタン -->
+        <button 
+          th:data-game-id="${item.gameId}"
+          class="delete-btn absolute top-3 right-3 bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all z-10 shadow-xl font-bold text-xl">
+          ×
+        </button>
+
+        <!-- ゲーム画像 -->
+        <div class="relative overflow-hidden">
+          <img th:src="${item.gameImage != null ? item.gameImage : 'https://placehold.co/400x185?text=No+Image'}" 
+               class="w-full rounded-t-2xl transition-transform group-hover:scale-105" 
+               alt="thumbnail">
+        </div>
+
+        <!-- ゲーム情報 -->
+        <div class="p-5">
+          <h2 class="font-bold text-lg mb-2 line-clamp-2" th:text="${item.gameTitle}"></h2>
+          <p th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
+             class="text-sm mb-2" 
+             th:text="'🏪 ' + ${item.shop}"></p>
+          <p class="text-red-500 font-bold text-xl mb-4" th:text="${item.currentPrice} + '円'"></p>
+          
+          <!-- ストアリンクボタン -->
+          <a th:if="${item.url != null and item.url != ''}"
+             th:href="${item.url}" 
+             target="_blank"
+             th:classappend="${darkMode} ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 'bg-gradient-to-r from-blue-500 to-blue-600'"
+             class="block w-full text-center text-white px-4 py-3 rounded-lg hover:shadow-xl transition-all mb-3 font-semibold">
+            🛒 ストアで見る
+          </a>
+          
+          <!-- URLがない場合の表示 -->
+          <div th:if="${item.url == null or item.url == ''}"
+               th:classappend="${darkMode} ? 'bg-gray-700 text-gray-500' : 'bg-gray-200 text-gray-500'"
+               class="block w-full text-center px-4 py-3 rounded-lg mb-3 cursor-not-allowed">
+            リンクなし
+          </div>
+          
+          <p th:classappend="${darkMode} ? 'text-gray-500' : 'text-gray-400'" 
+             class="text-xs text-center" 
+             th:text="'追加: ' + ${#temporals.format(item.addedAt, 'yyyy/MM/dd HH:mm')}"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- アイテム数表示 -->
+    <div th:if="${!#lists.isEmpty(wishlistItems)}" 
+         th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl p-4 mt-6 text-center neon-border">
+      <p th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" class="font-semibold"
+         th:text="'全 ' + ${#lists.size(wishlistItems)} + ' 件のアイテム'"></p>
+    </div>
+  </div>
+
+  <script>
+    // ウィッシュリストから削除
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const gameId = e.target.dataset.gameId;
+        
+        if (!confirm('このゲームをウィッシュリストから削除しますか?')) {
+          return;
+        }
+
+        try {
+          const res = await fetch(`/api/wishlist?gameId=${gameId}`, {
+            method: 'DELETE'
+          });
+
+          const result = await res.json();
+
+          if (result.success) {
+            const card = e.target.closest('div[class*="rounded-2xl"]');
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+              location.reload();
+            }, 300);
+          } else {
+            alert('❌ ' + result.message);
+          }
+        } catch (err) {
+          console.error(err);
+          alert('❌ エラーが発生しました');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
