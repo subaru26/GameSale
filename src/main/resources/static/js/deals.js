@@ -10,6 +10,8 @@ let currentSort = "default";
 let currentDeal = null;
 let isSearchMode = false;
 let savedSearchQuery = '';
+let searchHistory = [];
+const MAX_HISTORY = 10; // 最大履歴数
 
 const container = document.getElementById("dealsContainer");
 const prevBtn = document.getElementById("prevPage");
@@ -64,6 +66,9 @@ searchBtn.addEventListener("click", async () => {
       hasMoreData = false;
       clearSearchBtn.classList.remove("hidden");
       
+      // 検索履歴に追加
+      addToSearchHistory(query);
+      
       // 検索結果をlocalStorageに保存
       localStorage.setItem('searchResults', JSON.stringify(searchResults));
       localStorage.setItem('searchQuery', query);
@@ -92,7 +97,149 @@ searchBtn.addEventListener("click", async () => {
 // Enterキーで検索
 searchInput.addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
+    hideSearchHistory();
     searchBtn.click();
+  } else if (e.key === "Escape") {
+    hideSearchHistory();
+  }
+});
+
+// 検索履歴の読み込み
+function loadSearchHistory() {
+  const saved = localStorage.getItem('searchHistory');
+  if (saved) {
+    try {
+      searchHistory = JSON.parse(saved);
+    } catch (e) {
+      console.error("[Search] Error loading history:", e);
+      searchHistory = [];
+    }
+  }
+}
+
+// 検索履歴の保存
+function saveSearchHistory() {
+  localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+}
+
+// 検索履歴に追加
+function addToSearchHistory(query) {
+  if (!query || query.trim() === '') return;
+  
+  const trimmedQuery = query.trim();
+  
+  // 既存の履歴から同じものを削除
+  searchHistory = searchHistory.filter(h => h !== trimmedQuery);
+  
+  // 先頭に追加
+  searchHistory.unshift(trimmedQuery);
+  
+  // 最大履歴数を超えたら古いものを削除
+  if (searchHistory.length > MAX_HISTORY) {
+    searchHistory = searchHistory.slice(0, MAX_HISTORY);
+  }
+  
+  saveSearchHistory();
+}
+
+// 検索履歴の表示
+function showSearchHistory() {
+  const dropdown = document.getElementById('searchHistoryDropdown');
+  if (!dropdown) return;
+  
+  if (searchHistory.length === 0) {
+    dropdown.classList.add('hidden');
+    return;
+  }
+  
+  const inputValue = searchInput.value.toLowerCase();
+  const filteredHistory = searchHistory.filter(h => 
+    h.toLowerCase().includes(inputValue)
+  );
+  
+  if (filteredHistory.length === 0 && inputValue === '') {
+    // 入力がない場合は全履歴を表示
+    filteredHistory.push(...searchHistory);
+  }
+  
+  if (filteredHistory.length === 0) {
+    dropdown.classList.add('hidden');
+    return;
+  }
+  
+  const bgClass = darkMode ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800';
+  const hoverClass = darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100';
+  const borderClass = darkMode ? 'border-gray-600' : 'border-gray-300';
+  
+  dropdown.innerHTML = filteredHistory.map((historyItem, index) => {
+    const escapedItem = historyItem.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+    return `
+    <div class="search-history-item flex items-center justify-between px-4 py-2 ${hoverClass} cursor-pointer border-b ${borderClass} last:border-b-0"
+         data-query="${escapedItem}">
+      <span class="flex-1">🔍 ${historyItem}</span>
+      <button class="delete-history-btn text-red-500 hover:text-red-700 px-2" 
+              data-query="${escapedItem}"
+              onclick="event.stopPropagation(); deleteSearchHistory(event)">
+        ×
+      </button>
+    </div>
+  `;
+  }).join('');
+  
+  dropdown.classList.remove('hidden');
+  
+  // 履歴アイテムのクリックイベント
+  dropdown.querySelectorAll('.search-history-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      if (e.target.classList.contains('delete-history-btn')) return;
+      const query = item.dataset.query;
+      searchInput.value = query;
+      hideSearchHistory();
+      searchBtn.click();
+    });
+  });
+}
+
+// 検索履歴の非表示
+function hideSearchHistory() {
+  const dropdown = document.getElementById('searchHistoryDropdown');
+  if (dropdown) {
+    dropdown.classList.add('hidden');
+  }
+}
+
+// 検索履歴の削除
+function deleteSearchHistory(event) {
+  event.stopPropagation();
+  const query = event.target.closest('.search-history-item').dataset.query;
+  searchHistory = searchHistory.filter(h => h !== query);
+  saveSearchHistory();
+  showSearchHistory();
+}
+
+// 検索入力時の履歴表示
+searchInput.addEventListener('input', () => {
+  if (searchInput.value.trim() === '') {
+    showSearchHistory();
+  } else {
+    showSearchHistory();
+  }
+});
+
+// フォーカス時に履歴表示
+searchInput.addEventListener('focus', () => {
+  if (searchHistory.length > 0) {
+    showSearchHistory();
+  }
+});
+
+// クリック外部で履歴を非表示
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('searchHistoryDropdown');
+  const searchContainer = searchInput.closest('.relative');
+  
+  if (dropdown && searchContainer && !searchContainer.contains(e.target)) {
+    hideSearchHistory();
   }
 });
 
@@ -564,6 +711,9 @@ if (addToWishlistBtn) {
 
 // ページ読み込み時に検索結果を復元
 window.addEventListener("DOMContentLoaded", () => {
+  // 検索履歴を読み込み
+  loadSearchHistory();
+  
   const savedResults = localStorage.getItem('searchResults');
   const savedQuery = localStorage.getItem('searchQuery');
   const savedIsSearchMode = localStorage.getItem('isSearchMode');
