@@ -8,6 +8,7 @@ let isFetching = false;
 let excludeDLC = false;
 let currentSort = "default";
 let currentDeal = null;
+let isSearchMode = false;
 
 const container = document.getElementById("dealsContainer");
 const prevBtn = document.getElementById("prevPage");
@@ -15,6 +16,10 @@ const nextBtn = document.getElementById("nextPage");
 const scrollTopBtn = document.getElementById("scrollTopBtn");
 const fetchBtn = document.getElementById("fetchDealsBtn");
 const sortSelect = document.getElementById("sortSelect");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const clearSearchBtn = document.getElementById("clearSearchBtn");
+const loadingMessage = document.getElementById("loadingMessage");
 
 const excludeDLCCheckbox = document.getElementById("excludeDLC");
 if (excludeDLCCheckbox) {
@@ -25,6 +30,73 @@ if (excludeDLCCheckbox) {
     renderPage();
   });
 }
+
+// 検索機能
+searchBtn.addEventListener("click", async () => {
+  const query = searchInput.value.trim();
+  if (!query) {
+    alert("検索キーワードを入力してください。");
+    return;
+  }
+
+  if (isFetching) return;
+
+  isFetching = true;
+  searchBtn.disabled = true;
+  searchBtn.textContent = "検索中...";
+  loadingMessage.classList.remove("hidden");
+
+  dealsData = [];
+  currentPage = 1;
+  isSearchMode = true;
+
+  try {
+    const url = `/api/search?q=${encodeURIComponent(query)}`;
+    console.log("[Search] Fetching URL:", url);
+
+    const res = await fetch(url);
+    const searchResults = await res.json();
+
+    if (searchResults && searchResults.length > 0) {
+      dealsData = searchResults;
+      hasMoreData = false;
+      clearSearchBtn.classList.remove("hidden");
+    } else {
+      dealsData = [];
+      alert("検索結果が見つかりませんでした。");
+    }
+  } catch (err) {
+    console.error("[Search] Error:", err);
+    alert("検索中にエラーが発生しました。");
+    dealsData = [];
+  } finally {
+    isFetching = false;
+    searchBtn.disabled = false;
+    searchBtn.textContent = "🔍 検索";
+    loadingMessage.classList.add("hidden");
+    renderPage();
+  }
+});
+
+// Enterキーで検索
+searchInput.addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    searchBtn.click();
+  }
+});
+
+// 検索クリア
+clearSearchBtn.addEventListener("click", () => {
+  searchInput.value = "";
+  dealsData = [];
+  currentPage = 1;
+  isSearchMode = false;
+  hasMoreData = true;
+  clearSearchBtn.classList.add("hidden");
+  container.innerHTML = "";
+  prevBtn.disabled = true;
+  nextBtn.disabled = true;
+});
 
 fetchBtn.addEventListener("click", async () => {
   selectedStores = Array.from(document.querySelectorAll(".store-checkbox:checked"))
@@ -46,6 +118,9 @@ fetchBtn.addEventListener("click", async () => {
   currentPage = 1;
   totalFetched = 0;
   hasMoreData = true;
+  isSearchMode = false;
+  clearSearchBtn.classList.add("hidden");
+  searchInput.value = "";
 
   currentSort = sortSelect.value || "default";
 
@@ -53,7 +128,7 @@ fetchBtn.addEventListener("click", async () => {
   renderPage();
 
   fetchBtn.disabled = false;
-  fetchBtn.textContent = "セール情報を取得";
+  fetchBtn.textContent = "🔍 セール情報を取得";
   isFetching = false;
 });
 
@@ -146,13 +221,42 @@ function renderPage() {
 
     const textColorClass = darkMode ? "text-gray-400" : "text-gray-600";
     
+    // セール終了日時の表示用テキストを生成
+    let expiryText = '';
+    if (deal.expiry) {
+      try {
+        const expiryDate = new Date(deal.expiry);
+        const now = new Date();
+        const diffTime = expiryDate - now;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 0) {
+          const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+          expiryText = `<p class="text-sm ${textColorClass} mt-1">⏰ セール終了: ${expiryDateStr} (あと${diffDays}日)</p>`;
+        } else if (diffDays === 0) {
+          expiryText = `<p class="text-sm text-orange-500 font-semibold mt-1">⏰ セール終了: 今日</p>`;
+        } else {
+          expiryText = `<p class="text-sm text-red-500 font-semibold mt-1">⏰ セール終了済み</p>`;
+        }
+      } catch (e) {
+        console.error('Error parsing expiry date:', e);
+      }
+    }
+    
     card.innerHTML = `
       <img src="${img}" class="w-full rounded-xl mb-3 shadow-md" alt="thumbnail">
       <h2 class="font-bold text-lg mb-2 line-clamp-2">${deal.title}</h2>
       <p class="text-sm ${textColorClass} mb-1">🏪 ${deal.shop}</p>
       <p class="text-sm ${textColorClass}">通常: <span class="line-through">${deal.priceOld}円</span></p>
-      <p class="text-red-500 font-bold text-xl my-2">セール: ${deal.priceNew}円</p>
+      <p class="text-red-500 font-bold text-xl my-2">最安値: ${deal.priceNew}円</p>
       <p class="text-sm text-green-500 font-semibold">💰 ${deal.cut}% OFF</p>
+      ${expiryText}
     `;
     container.appendChild(card);
 
@@ -177,19 +281,154 @@ function renderPage() {
         const data = await res.json();
 
         const bgClass = darkMode ? "bg-gray-700" : "bg-gray-50";
-        modalContent.innerHTML = `
-          <img src="${data.assets?.banner400 || deal.image}" class="rounded-lg w-full mb-3">
-          <h2 class="text-xl font-bold">${data.title}</h2>
-          <div class="${bgClass} p-3 rounded mt-3 text-sm">
-            <p>💰 現在価格: ${deal.priceNew}円 (${deal.cut}%OFF)</p>
-            <p>💵 通常価格: ${deal.priceOld}円</p>
-            <p>🕒 過去最安値: ${deal.historyLow || '不明'}円</p>
+        const borderClass = darkMode ? "border-gray-600" : "border-gray-300";
+        
+        // ストアページとウィッシュリスト追加ボタン
+        let buttonsHtml = '';
+        if (deal.url) {
+          buttonsHtml = `
+            <div class="flex gap-3 justify-center mb-4">
+              <a href="${deal.url}" target="_blank" 
+                 class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg hover:shadow-xl transition-all font-semibold">
+                🔗 ストアページ
+              </a>
+              <button id="addToWishlistBtnModal"
+                      class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-3 rounded-lg hover:shadow-xl transition-all font-semibold">
+                ⭐ ウィッシュリスト追加
+              </button>
+            </div>
+          `;
+        }
+        
+        // 最安値ストアの情報
+        let modalHtml = `
+          <img src="${data.assets?.banner400 || deal.image}" class="rounded-lg w-full mb-4">
+          <h2 class="text-2xl font-bold mb-4">${data.title || deal.title}</h2>
+          
+          ${buttonsHtml}
+          
+          <div class="${bgClass} p-4 rounded-lg mb-4 border ${borderClass}">
+            <h3 class="text-lg font-semibold mb-2 text-green-500">💰 最安値ストア</h3>
+            <p class="text-sm mb-1"><span class="font-semibold">ストア:</span> ${deal.shop}</p>
+            <p class="text-sm mb-1"><span class="font-semibold">セール価格:</span> <span class="text-red-500 font-bold">${deal.priceNew}円</span> <span class="text-green-500">(${deal.cut}%OFF)</span></p>
+            <p class="text-sm mb-1"><span class="font-semibold">通常価格:</span> <span class="line-through">${deal.priceOld}円</span></p>
+            ${deal.expiry ? (() => {
+              try {
+                const expiryDate = new Date(deal.expiry);
+                const now = new Date();
+                const diffTime = expiryDate - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+                if (diffDays > 0) {
+                  return `<p class="text-sm mb-1"><span class="font-semibold">セール終了:</span> ${expiryDateStr} <span class="text-orange-500">(あと${diffDays}日)</span></p>`;
+                } else if (diffDays === 0) {
+                  return `<p class="text-sm mb-1"><span class="font-semibold">セール終了:</span> <span class="text-orange-500 font-semibold">今日</span></p>`;
+                } else {
+                  return `<p class="text-sm mb-1"><span class="font-semibold">セール終了:</span> <span class="text-red-500 font-semibold">終了済み</span></p>`;
+                }
+              } catch (e) {
+                return '';
+              }
+            })() : ''}
+            ${deal.historyLow ? `<p class="text-sm"><span class="font-semibold">過去最安値:</span> ${deal.historyLow}円</p>` : ''}
           </div>
         `;
 
-        if (deal.url) {
-          document.getElementById("storeLink").href = deal.url;
-          storeLinkContainer.classList.remove("hidden");
+        // 他のストアの情報を表示
+        if (deal.otherDeals && deal.otherDeals.length > 0) {
+          modalHtml += `
+            <div class="${bgClass} p-4 rounded-lg border ${borderClass}">
+              <h3 class="text-lg font-semibold mb-3">🏪 他のストアの価格</h3>
+              <div class="space-y-3">
+          `;
+          
+          deal.otherDeals.forEach(otherDeal => {
+            let expiryHtml = '';
+            if (otherDeal.expiry) {
+              try {
+                const expiryDate = new Date(otherDeal.expiry);
+                const now = new Date();
+                const diffTime = expiryDate - now;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                });
+                if (diffDays > 0) {
+                  expiryHtml = `<p class="text-sm mb-1">セール終了: ${expiryDateStr} <span class="text-orange-500">(あと${diffDays}日)</span></p>`;
+                } else if (diffDays === 0) {
+                  expiryHtml = `<p class="text-sm mb-1">セール終了: <span class="text-orange-500 font-semibold">今日</span></p>`;
+                } else {
+                  expiryHtml = `<p class="text-sm mb-1">セール終了: <span class="text-red-500 font-semibold">終了済み</span></p>`;
+                }
+              } catch (e) {
+                // エラー時は何も表示しない
+              }
+            }
+            
+            modalHtml += `
+              <div class="border-b ${borderClass} pb-3 last:border-b-0">
+                <p class="text-sm mb-1"><span class="font-semibold">${otherDeal.shop}</span></p>
+                <p class="text-sm mb-1">セール価格: <span class="text-red-500 font-bold">${otherDeal.priceNew}円</span> <span class="text-green-500">(${otherDeal.cut}%OFF)</span></p>
+                <p class="text-sm mb-1">通常価格: <span class="line-through">${otherDeal.priceOld}円</span></p>
+                ${expiryHtml}
+                ${otherDeal.url ? `<a href="${otherDeal.url}" target="_blank" class="text-blue-500 hover:underline text-xs mt-1 inline-block">ストアページへ →</a>` : ''}
+              </div>
+            `;
+          });
+          
+          modalHtml += `
+              </div>
+            </div>
+          `;
+        }
+
+        modalContent.innerHTML = modalHtml;
+
+        // ウィッシュリスト追加ボタンのイベントリスナーを設定
+        const addToWishlistBtnModal = document.getElementById("addToWishlistBtnModal");
+        if (addToWishlistBtnModal) {
+          addToWishlistBtnModal.addEventListener("click", async () => {
+            if (!currentDeal) return;
+
+            const gameId = currentDeal.gameID || currentDeal.id;
+            const data = {
+              gameId: gameId,
+              gameTitle: currentDeal.title,
+              gameImage: currentDeal.image,
+              currentPrice: currentDeal.priceNew,
+              shop: currentDeal.shop,
+              url: currentDeal.url
+            };
+
+            try {
+              const res = await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+              });
+
+              const result = await res.json();
+              
+              if (result.success) {
+                alert("✅ ウィッシュリストに追加しました！");
+              } else {
+                alert("⚠️ " + result.message);
+              }
+            } catch (err) {
+              console.error(err);
+              alert("❌ エラーが発生しました");
+            }
+          });
         }
 
       } catch (err) {
@@ -235,7 +474,7 @@ nextBtn.addEventListener("click", async () => {
   if (currentPage < totalPages) {
     currentPage++;
     renderPage();
-  } else if (hasMoreData) {
+  } else if (hasMoreData && !isSearchMode) {
     await fetchMoreDeals();
     renderPage();
   }
