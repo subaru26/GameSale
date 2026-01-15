@@ -328,8 +328,11 @@
         </form>
 
         <!-- 再送信フォーム -->
-        <form th:action="@{/login/resend-code}" method="post">
-            <button type="submit" class="resend-btn">🔄 認証コードを再送信</button>
+        <form th:action="@{/login/resend-code}" method="post" id="resendForm">
+            <button type="submit" class="resend-btn" id="resendBtn">🔄 認証コードを再送信</button>
+            <div id="resendLoadingMessage" style="display: none; text-align: center; margin-top: 0.5rem; color: #00d4ff; font-size: 14px;">
+                📧 メール送信中...
+            </div>
         </form>
 
         <!-- ログイン画面に戻る -->
@@ -338,6 +341,20 @@
         </a>
     </div>
 </div>
+
+<script>
+// 再送信フォーム送信時の処理
+document.getElementById('resendForm').addEventListener('submit', function(e) {
+    const resendBtn = document.getElementById('resendBtn');
+    const resendLoadingMessage = document.getElementById('resendLoadingMessage');
+    
+    if (resendBtn && resendLoadingMessage) {
+        resendBtn.disabled = true;
+        resendBtn.textContent = '送信中...';
+        resendLoadingMessage.style.display = 'block';
+    }
+});
+</script>
 
 </body>
 </html>

@@ -327,7 +327,10 @@
                 </span>
             </div>
 
-            <button type="submit">ログイン</button>
+            <button type="submit" id="loginBtn">ログイン</button>
+            <div id="loadingMessage" style="display: none; text-align: center; margin-top: 1rem; color: #00d4ff; font-size: 14px;">
+                📧 メール送信中...
+            </div>
         </form>
 
         <div class="register-link">
@@ -355,6 +358,18 @@ function togglePassword(id) {
         </svg>`;
     }
 }
+
+// ログインフォーム送信時の処理
+document.querySelector('form').addEventListener('submit', function(e) {
+    const loginBtn = document.getElementById('loginBtn');
+    const loadingMessage = document.getElementById('loadingMessage');
+    
+    if (loginBtn && loadingMessage) {
+        loginBtn.disabled = true;
+        loginBtn.textContent = '送信中...';
+        loadingMessage.style.display = 'block';
+    }
+});
 </script>
 
 </body>

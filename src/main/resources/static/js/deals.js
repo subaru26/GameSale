@@ -9,6 +9,7 @@ let excludeDLC = false;
 let currentSort = "default";
 let currentDeal = null;
 let isSearchMode = false;
+let savedSearchQuery = '';
 
 const container = document.getElementById("dealsContainer");
 const prevBtn = document.getElementById("prevPage");
@@ -49,6 +50,7 @@ searchBtn.addEventListener("click", async () => {
   dealsData = [];
   currentPage = 1;
   isSearchMode = true;
+  savedSearchQuery = query;
 
   try {
     const url = `/api/search?q=${encodeURIComponent(query)}`;
@@ -61,9 +63,18 @@ searchBtn.addEventListener("click", async () => {
       dealsData = searchResults;
       hasMoreData = false;
       clearSearchBtn.classList.remove("hidden");
+      
+      // 検索結果をlocalStorageに保存
+      localStorage.setItem('searchResults', JSON.stringify(searchResults));
+      localStorage.setItem('searchQuery', query);
+      localStorage.setItem('isSearchMode', 'true');
     } else {
       dealsData = [];
       alert("検索結果が見つかりませんでした。");
+      // 検索結果がない場合はlocalStorageをクリア
+      localStorage.removeItem('searchResults');
+      localStorage.removeItem('searchQuery');
+      localStorage.removeItem('isSearchMode');
     }
   } catch (err) {
     console.error("[Search] Error:", err);
@@ -91,11 +102,17 @@ clearSearchBtn.addEventListener("click", () => {
   dealsData = [];
   currentPage = 1;
   isSearchMode = false;
+  savedSearchQuery = '';
   hasMoreData = true;
   clearSearchBtn.classList.add("hidden");
   container.innerHTML = "";
   prevBtn.disabled = true;
   nextBtn.disabled = true;
+  
+  // localStorageから検索結果を削除
+  localStorage.removeItem('searchResults');
+  localStorage.removeItem('searchQuery');
+  localStorage.removeItem('isSearchMode');
 });
 
 fetchBtn.addEventListener("click", async () => {
@@ -119,8 +136,14 @@ fetchBtn.addEventListener("click", async () => {
   totalFetched = 0;
   hasMoreData = true;
   isSearchMode = false;
+  savedSearchQuery = '';
   clearSearchBtn.classList.add("hidden");
   searchInput.value = "";
+
+  // localStorageから検索結果を削除
+  localStorage.removeItem('searchResults');
+  localStorage.removeItem('searchQuery');
+  localStorage.removeItem('isSearchMode');
 
   currentSort = sortSelect.value || "default";
 
@@ -504,35 +527,70 @@ modal.addEventListener("click", (e) => {
 });
 
 const addToWishlistBtn = document.getElementById("addToWishlistBtn");
-addToWishlistBtn.addEventListener("click", async () => {
-  if (!currentDeal) return;
+if (addToWishlistBtn) {
+  addToWishlistBtn.addEventListener("click", async () => {
+    if (!currentDeal) return;
 
-  const gameId = currentDeal.gameID || currentDeal.id;
-  const data = {
-    gameId: gameId,
-    gameTitle: currentDeal.title,
-    gameImage: currentDeal.image,
-    currentPrice: currentDeal.priceNew,
-    shop: currentDeal.shop,
-    url: currentDeal.url
-  };
+    const gameId = currentDeal.gameID || currentDeal.id;
+    const data = {
+      gameId: gameId,
+      gameTitle: currentDeal.title,
+      gameImage: currentDeal.image,
+      currentPrice: currentDeal.priceNew,
+      shop: currentDeal.shop,
+      url: currentDeal.url
+    };
 
-  try {
-    const res = await fetch("/api/wishlist", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
+    try {
+      const res = await fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
 
-    const result = await res.json();
-    
-    if (result.success) {
-      alert("✅ ウィッシュリストに追加しました！");
-    } else {
-      alert("⚠️ " + result.message);
+      const result = await res.json();
+      
+      if (result.success) {
+        alert("✅ ウィッシュリストに追加しました！");
+      } else {
+        alert("⚠️ " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("❌ エラーが発生しました");
     }
-  } catch (err) {
-    console.error(err);
-    alert("❌ エラーが発生しました");
+  });
+}
+
+// ページ読み込み時に検索結果を復元
+window.addEventListener("DOMContentLoaded", () => {
+  const savedResults = localStorage.getItem('searchResults');
+  const savedQuery = localStorage.getItem('searchQuery');
+  const savedIsSearchMode = localStorage.getItem('isSearchMode');
+  
+  if (savedResults && savedIsSearchMode === 'true') {
+    try {
+      dealsData = JSON.parse(savedResults);
+      isSearchMode = true;
+      savedSearchQuery = savedQuery || '';
+      hasMoreData = false;
+      
+      if (searchInput && savedQuery) {
+        searchInput.value = savedQuery;
+      }
+      
+      if (clearSearchBtn) {
+        clearSearchBtn.classList.remove("hidden");
+      }
+      
+      currentPage = 1;
+      renderPage();
+      console.log("[Search] Restored search results from localStorage");
+    } catch (e) {
+      console.error("[Search] Error restoring search results:", e);
+      localStorage.removeItem('searchResults');
+      localStorage.removeItem('searchQuery');
+      localStorage.removeItem('isSearchMode');
+    }
   }
 });
