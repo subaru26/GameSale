@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,9 @@ public class SettingsController {
 
     @Autowired
     private UserService userService;
+    
+    @Value("${app.test-mode.enabled:false}")
+    private boolean testModeEnabled;
 
     // 設定画面表示
     @GetMapping("/settings")
@@ -40,6 +44,9 @@ public class SettingsController {
         // 【修正】DBのdarkModeがfalseなら、画面には「ダークモードである(true)」と伝える
         // これにより、初期値falseの新規ユーザーはダークモードで表示されます
         model.addAttribute("darkMode", user == null || !user.isDarkMode());
+        
+        // テストモード状態を追加
+        model.addAttribute("testModeEnabled", testModeEnabled);
 
         return "settings";
     }

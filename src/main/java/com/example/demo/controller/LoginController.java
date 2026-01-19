@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,16 +28,20 @@ public class LoginController {
     @Autowired
     private MailService mailService;
     
+    @Value("${app.test-mode.enabled:false}")
+    private boolean testModeEnabled;
+    
     private static final SecureRandom random = new SecureRandom();
 
     // ログイン画面表示
     @GetMapping("/login")
-    public String loginPage(HttpServletRequest request) {
+    public String loginPage(HttpServletRequest request, Model model) {
         HttpSession oldSession = request.getSession(false);
         if (oldSession != null) {
             oldSession.invalidate();
         }
         request.getSession(true);
+        model.addAttribute("testModeEnabled", testModeEnabled);
         return "login";
     }
 
@@ -50,6 +55,21 @@ public class LoginController {
         User user = userService.authenticate(email, password);
 
         if (user != null) {
+            // テストモードが有効な場合、メール認証をスキップして直接ログイン
+            if (testModeEnabled) {
+                HttpSession session = request.getSession(true);
+                Map<String, String> sessionUser = new HashMap<>();
+                sessionUser.put("id", String.valueOf(user.getId()));
+                sessionUser.put("name", user.getAccount_name());
+                sessionUser.put("email", user.getEmail());
+                
+                session.setAttribute("user", sessionUser);
+                session.setMaxInactiveInterval(30 * 60);
+                
+                return "redirect:/deals";
+            }
+            
+            // 通常モード：認証コード送信
             String code = String.format("%06d", random.nextInt(999999));
             
             HttpSession session = request.getSession(true);
