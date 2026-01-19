@@ -209,7 +209,7 @@ function showSearchHistory() {
       const query = item.dataset.query;
       searchInput.value = query;
       hideSearchHistory();
-      searchBtn.click();
+      // 自動検索は行わない（入力欄に値を設定するだけ）
     });
   });
 }
@@ -458,13 +458,22 @@ function renderPage() {
       }
     }
     
+    // セールがない場合（0%OFF）の表示制御
+    const hasDiscount = deal.cut && deal.cut > 0;
+    const priceOldHtml = hasDiscount 
+      ? `<p class="text-sm ${textColorClass}">通常: <span class="line-through">${deal.priceOld}円</span></p>`
+      : `<p class="text-sm ${textColorClass}">価格: ${deal.priceOld}円</p>`;
+    const discountHtml = hasDiscount 
+      ? `<p class="text-sm text-green-500 font-semibold">💰 ${deal.cut}% OFF</p>`
+      : '';
+    
     card.innerHTML = `
       <img src="${img}" class="w-full rounded-xl mb-3 shadow-md" alt="thumbnail">
       <h2 class="font-bold text-lg mb-2 line-clamp-2">${deal.title}</h2>
       <p class="text-sm ${textColorClass} mb-1">🏪 ${deal.shop}</p>
-      <p class="text-sm ${textColorClass}">通常: <span class="line-through">${deal.priceOld}円</span></p>
+      ${priceOldHtml}
       <p class="text-red-500 font-bold text-xl my-2">最安値: ${deal.priceNew}円</p>
-      <p class="text-sm text-green-500 font-semibold">💰 ${deal.cut}% OFF</p>
+      ${discountHtml}
       ${expiryText}
     `;
     container.appendChild(card);
@@ -510,6 +519,12 @@ function renderPage() {
         }
         
         // 最安値ストアの情報
+        const hasDiscountModal = deal.cut && deal.cut > 0;
+        const priceInfoHtml = hasDiscountModal
+          ? `<p class="text-sm mb-1"><span class="font-semibold">セール価格:</span> <span class="text-red-500 font-bold">${deal.priceNew}円</span> <span class="text-green-500">(${deal.cut}%OFF)</span></p>
+            <p class="text-sm mb-1"><span class="font-semibold">通常価格:</span> <span class="line-through">${deal.priceOld}円</span></p>`
+          : `<p class="text-sm mb-1"><span class="font-semibold">価格:</span> <span class="text-red-500 font-bold">${deal.priceNew}円</span></p>`;
+        
         let modalHtml = `
           <img src="${data.assets?.banner400 || deal.image}" class="rounded-lg w-full mb-4">
           <h2 class="text-2xl font-bold mb-4">${data.title || deal.title}</h2>
@@ -519,8 +534,7 @@ function renderPage() {
           <div class="${bgClass} p-4 rounded-lg mb-4 border ${borderClass}">
             <h3 class="text-lg font-semibold mb-2 text-green-500">💰 最安値ストア</h3>
             <p class="text-sm mb-1"><span class="font-semibold">ストア:</span> ${deal.shop}</p>
-            <p class="text-sm mb-1"><span class="font-semibold">セール価格:</span> <span class="text-red-500 font-bold">${deal.priceNew}円</span> <span class="text-green-500">(${deal.cut}%OFF)</span></p>
-            <p class="text-sm mb-1"><span class="font-semibold">通常価格:</span> <span class="line-through">${deal.priceOld}円</span></p>
+            ${priceInfoHtml}
             ${deal.expiry ? (() => {
               try {
                 const expiryDate = new Date(deal.expiry);
@@ -584,11 +598,16 @@ function renderPage() {
               }
             }
             
+            const hasOtherDiscount = otherDeal.cut && otherDeal.cut > 0;
+            const otherPriceInfoHtml = hasOtherDiscount
+              ? `<p class="text-sm mb-1">セール価格: <span class="text-red-500 font-bold">${otherDeal.priceNew}円</span> <span class="text-green-500">(${otherDeal.cut}%OFF)</span></p>
+                 <p class="text-sm mb-1">通常価格: <span class="line-through">${otherDeal.priceOld}円</span></p>`
+              : `<p class="text-sm mb-1">価格: <span class="text-red-500 font-bold">${otherDeal.priceNew}円</span></p>`;
+            
             modalHtml += `
               <div class="border-b ${borderClass} pb-3 last:border-b-0">
                 <p class="text-sm mb-1"><span class="font-semibold">${otherDeal.shop}</span></p>
-                <p class="text-sm mb-1">セール価格: <span class="text-red-500 font-bold">${otherDeal.priceNew}円</span> <span class="text-green-500">(${otherDeal.cut}%OFF)</span></p>
-                <p class="text-sm mb-1">通常価格: <span class="line-through">${otherDeal.priceOld}円</span></p>
+                ${otherPriceInfoHtml}
                 ${expiryHtml}
                 ${otherDeal.url ? `<a href="${otherDeal.url}" target="_blank" class="text-blue-500 hover:underline text-xs mt-1 inline-block">ストアページへ →</a>` : ''}
               </div>
