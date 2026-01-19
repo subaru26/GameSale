@@ -23,6 +23,7 @@ const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
 const loadingMessage = document.getElementById("loadingMessage");
+const filterSortArea = document.getElementById("filterSortArea");
 
 const excludeDLCCheckbox = document.getElementById("excludeDLC");
 if (excludeDLCCheckbox) {
@@ -66,8 +67,15 @@ searchBtn.addEventListener("click", async () => {
       hasMoreData = false;
       clearSearchBtn.classList.remove("hidden");
       
-      // 検索履歴に追加
-      addToSearchHistory(query);
+      // フィルター・ソートエリアを非表示
+      if (filterSortArea) {
+        filterSortArea.classList.add("hidden");
+      }
+      
+      // 検索履歴に追加（非同期だが、エラーが発生しても検索結果は表示する）
+      addToSearchHistory(query).catch(err => {
+        console.error("[Search] Error adding to history:", err);
+      });
       
       // 検索結果をlocalStorageに保存
       localStorage.setItem('searchResults', JSON.stringify(searchResults));
@@ -104,42 +112,48 @@ searchInput.addEventListener("keypress", (e) => {
   }
 });
 
-// 検索履歴の読み込み
-function loadSearchHistory() {
-  const saved = localStorage.getItem('searchHistory');
-  if (saved) {
-    try {
-      searchHistory = JSON.parse(saved);
-    } catch (e) {
-      console.error("[Search] Error loading history:", e);
+// 検索履歴の読み込み（データベースから）
+async function loadSearchHistory() {
+  try {
+    const res = await fetch('/api/search-history');
+    const data = await res.json();
+    
+    if (data.success && data.history) {
+      searchHistory = data.history;
+      console.log("[Search] Loaded history from database:", searchHistory.length, "items");
+    } else {
       searchHistory = [];
     }
+  } catch (err) {
+    console.error("[Search] Error loading history from DB:", err);
+    searchHistory = [];
   }
 }
 
-// 検索履歴の保存
-function saveSearchHistory() {
-  localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-}
-
-// 検索履歴に追加
-function addToSearchHistory(query) {
+// 検索履歴に追加（データベースへ）
+async function addToSearchHistory(query) {
   if (!query || query.trim() === '') return;
   
   const trimmedQuery = query.trim();
   
-  // 既存の履歴から同じものを削除
-  searchHistory = searchHistory.filter(h => h !== trimmedQuery);
-  
-  // 先頭に追加
-  searchHistory.unshift(trimmedQuery);
-  
-  // 最大履歴数を超えたら古いものを削除
-  if (searchHistory.length > MAX_HISTORY) {
-    searchHistory = searchHistory.slice(0, MAX_HISTORY);
+  try {
+    const res = await fetch('/api/search-history', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: trimmedQuery })
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      // 履歴を再読み込み
+      await loadSearchHistory();
+      console.log("[Search] Added to history:", trimmedQuery);
+    } else {
+      console.error("[Search] Failed to add history:", data.message);
+    }
+  } catch (err) {
+    console.error("[Search] Error adding history to DB:", err);
   }
-  
-  saveSearchHistory();
 }
 
 // 検索履歴の表示
@@ -208,13 +222,28 @@ function hideSearchHistory() {
   }
 }
 
-// 検索履歴の削除
-function deleteSearchHistory(event) {
+// 検索履歴の削除（データベースから）
+async function deleteSearchHistory(event) {
   event.stopPropagation();
   const query = event.target.closest('.search-history-item').dataset.query;
-  searchHistory = searchHistory.filter(h => h !== query);
-  saveSearchHistory();
-  showSearchHistory();
+  
+  try {
+    const res = await fetch(`/api/search-history?query=${encodeURIComponent(query)}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await res.json();
+    if (data.success) {
+      // 履歴を再読み込み
+      await loadSearchHistory();
+      showSearchHistory();
+      console.log("[Search] Deleted from history:", query);
+    } else {
+      console.error("[Search] Failed to delete history:", data.message);
+    }
+  } catch (err) {
+    console.error("[Search] Error deleting history from DB:", err);
+  }
 }
 
 // 検索入力時の履歴表示
@@ -256,6 +285,11 @@ clearSearchBtn.addEventListener("click", () => {
   prevBtn.disabled = true;
   nextBtn.disabled = true;
   
+  // フィルター・ソートエリアを再表示
+  if (filterSortArea) {
+    filterSortArea.classList.remove("hidden");
+  }
+  
   // localStorageから検索結果を削除
   localStorage.removeItem('searchResults');
   localStorage.removeItem('searchQuery');
@@ -286,6 +320,11 @@ fetchBtn.addEventListener("click", async () => {
   savedSearchQuery = '';
   clearSearchBtn.classList.add("hidden");
   searchInput.value = "";
+
+  // フィルター・ソートエリアを再表示
+  if (filterSortArea) {
+    filterSortArea.classList.remove("hidden");
+  }
 
   // localStorageから検索結果を削除
   localStorage.removeItem('searchResults');
@@ -710,9 +749,9 @@ if (addToWishlistBtn) {
 }
 
 // ページ読み込み時に検索結果を復元
-window.addEventListener("DOMContentLoaded", () => {
-  // 検索履歴を読み込み
-  loadSearchHistory();
+window.addEventListener("DOMContentLoaded", async () => {
+  // 検索履歴をデータベースから読み込み
+  await loadSearchHistory();
   
   const savedResults = localStorage.getItem('searchResults');
   const savedQuery = localStorage.getItem('searchQuery');
@@ -731,6 +770,12 @@ window.addEventListener("DOMContentLoaded", () => {
       
       if (clearSearchBtn) {
         clearSearchBtn.classList.remove("hidden");
+      }
+      
+      // フィルター・ソートエリアを非表示
+      const filterSortAreaReload = document.getElementById("filterSortArea");
+      if (filterSortAreaReload) {
+        filterSortAreaReload.classList.add("hidden");
       }
       
       currentPage = 1;

@@ -68,9 +68,9 @@
 
     <!-- 検索エリア -->
     <div th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'" 
-         class="backdrop-blur-md rounded-2xl p-6 mb-6 neon-border">
+         class="backdrop-blur-md rounded-2xl p-6 mb-6 neon-border relative z-10">
       <div class="flex gap-4 items-center relative">
-        <div class="flex-1 relative">
+        <div class="flex-1 relative z-20">
           <input 
             type="text" 
             id="searchInput" 
@@ -99,7 +99,7 @@
     </div>
 
     <!-- フィルター・ソートエリア -->
-    <div th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'" 
+    <div id="filterSortArea" th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'" 
          class="backdrop-blur-md rounded-2xl p-6 mb-6 neon-border">
       <div class="flex flex-wrap gap-4 items-center">
         <div class="flex flex-wrap gap-3">
