@@ -31,6 +31,7 @@ public class ApiDealResponse {
         private Price regular;
         private int cut;
         private String url;
+        private String expiry;
 
         // 過去最安値
         private Price storeLow;       // 現在ストアでの最安値

@@ -73,6 +73,7 @@ public class DealService {
                     dto.setHistoryLow(item.getDeal().getHistoryLow() != null ? item.getDeal().getHistoryLow().getAmount() : null);
                     dto.setHistoryLow1y(item.getDeal().getHistoryLow_1y() != null ? item.getDeal().getHistoryLow_1y().getAmount() : null);
                     dto.setHistoryLow3m(item.getDeal().getHistoryLow_3m() != null ? item.getDeal().getHistoryLow_3m().getAmount() : null);
+                    dto.setExpiry(item.getDeal().getExpiry());
                 }
 
                 if (item.getAssets() != null) {
