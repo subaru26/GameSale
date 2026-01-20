@@ -64,14 +64,12 @@ searchBtn.addEventListener("click", async () => {
       hasMoreData = false;
       clearSearchBtn.classList.remove("hidden");
       
-      // 検索結果をlocalStorageに保存
       localStorage.setItem('searchResults', JSON.stringify(searchResults));
       localStorage.setItem('searchQuery', query);
       localStorage.setItem('isSearchMode', 'true');
     } else {
       dealsData = [];
       alert("検索結果が見つかりませんでした。");
-      // 検索結果がない場合はlocalStorageをクリア
       localStorage.removeItem('searchResults');
       localStorage.removeItem('searchQuery');
       localStorage.removeItem('isSearchMode');
@@ -109,7 +107,6 @@ clearSearchBtn.addEventListener("click", () => {
   prevBtn.disabled = true;
   nextBtn.disabled = true;
   
-  // localStorageから検索結果を削除
   localStorage.removeItem('searchResults');
   localStorage.removeItem('searchQuery');
   localStorage.removeItem('isSearchMode');
@@ -140,7 +137,6 @@ fetchBtn.addEventListener("click", async () => {
   clearSearchBtn.classList.add("hidden");
   searchInput.value = "";
 
-  // localStorageから検索結果を削除
   localStorage.removeItem('searchResults');
   localStorage.removeItem('searchQuery');
   localStorage.removeItem('isSearchMode');
@@ -251,25 +247,30 @@ function renderPage() {
         const expiryDate = new Date(deal.expiry);
         const now = new Date();
         const diffTime = expiryDate - now;
+        const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (diffDays > 0) {
-          const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-          expiryText = `<p class="text-sm ${textColorClass} mt-1">⏰ セール終了: ${expiryDateStr} (あと${diffDays}日)</p>`;
-        } else if (diffDays === 0) {
-          expiryText = `<p class="text-sm text-orange-500 font-semibold mt-1">⏰ セール終了: 今日</p>`;
-        } else {
+        if (diffHours < 0) {
           expiryText = `<p class="text-sm text-red-500 font-semibold mt-1">⏰ セール終了済み</p>`;
+        } else if (diffHours < 24) {
+          expiryText = `<p class="text-sm text-red-500 font-semibold mt-1 animate-pulse">⏰ 残り ${diffHours}時間</p>`;
+        } else if (diffDays <= 3) {
+          expiryText = `<p class="text-sm text-orange-500 font-semibold mt-1">⏰ 残り ${diffDays}日</p>`;
+        } else if (diffDays <= 7) {
+          expiryText = `<p class="text-sm text-yellow-500 font-semibold mt-1">⏰ 残り ${diffDays}日</p>`;
+        } else {
+          const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
+            month: 'numeric', 
+            day: 'numeric'
+          });
+          expiryText = `<p class="text-sm ${textColorClass} mt-1">⏰ ${expiryDateStr}まで</p>`;
         }
       } catch (e) {
         console.error('Error parsing expiry date:', e);
       }
+    } else {
+      // 終了日時不明の場合
+      expiryText = `<p class="text-sm ${textColorClass} mt-1 opacity-60">⏰ 終了日不明</p>`;
     }
     
     card.innerHTML = `
@@ -277,7 +278,7 @@ function renderPage() {
       <h2 class="font-bold text-lg mb-2 line-clamp-2">${deal.title}</h2>
       <p class="text-sm ${textColorClass} mb-1">🏪 ${deal.shop}</p>
       <p class="text-sm ${textColorClass}">通常: <span class="line-through">${deal.priceOld}円</span></p>
-      <p class="text-red-500 font-bold text-xl my-2">最安値: ${deal.priceNew}円</p>
+      <p class="text-red-500 font-bold text-xl my-2">セール: ${deal.priceNew}円</p>
       <p class="text-sm text-green-500 font-semibold">💰 ${deal.cut}% OFF</p>
       ${expiryText}
     `;
@@ -303,7 +304,7 @@ function renderPage() {
         const res = await fetch(`/api/gameinfo?id=${gameId}`);
         const data = await res.json();
 
-        const bgClass = darkMode ? "bg-gray-700" : "bg-gray-50";
+        const bgClass = darkMode ? "bg-gray-700/50 backdrop-blur-sm" : "bg-gray-50";
         const borderClass = darkMode ? "border-gray-600" : "border-gray-300";
         
         // ストアページとウィッシュリスト追加ボタン
@@ -325,21 +326,23 @@ function renderPage() {
         
         // 最安値ストアの情報
         let modalHtml = `
-          <img src="${data.assets?.banner400 || deal.image}" class="rounded-lg w-full mb-4">
-          <h2 class="text-2xl font-bold mb-4">${data.title || deal.title}</h2>
+          <img src="${data.assets?.banner400 || deal.image}" class="rounded-2xl w-full mb-4 shadow-lg">
+          <h2 class="text-2xl font-bold mb-3">${data.title || deal.title}</h2>
           
           ${buttonsHtml}
           
-          <div class="${bgClass} p-4 rounded-lg mb-4 border ${borderClass}">
+          <div class="${bgClass} p-4 rounded-xl mt-3 space-y-2 border ${borderClass}">
             <h3 class="text-lg font-semibold mb-2 text-green-500">💰 最安値ストア</h3>
-            <p class="text-sm mb-1"><span class="font-semibold">ストア:</span> ${deal.shop}</p>
-            <p class="text-sm mb-1"><span class="font-semibold">セール価格:</span> <span class="text-red-500 font-bold">${deal.priceNew}円</span> <span class="text-green-500">(${deal.cut}%OFF)</span></p>
-            <p class="text-sm mb-1"><span class="font-semibold">通常価格:</span> <span class="line-through">${deal.priceOld}円</span></p>
+            <p class="flex items-center justify-between"><span>ストア</span><span class="font-bold">${deal.shop}</span></p>
+            <p class="flex items-center justify-between"><span>セール価格</span><span class="font-bold text-xl text-red-500">${deal.priceNew}円</span></p>
+            <p class="flex items-center justify-between text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}"><span>通常価格</span><span class="line-through">${deal.priceOld}円</span></p>
+            <p class="flex items-center justify-between"><span class="text-green-500">割引率</span><span class="font-bold text-green-500">${deal.cut}% OFF</span></p>
             ${deal.expiry ? (() => {
               try {
                 const expiryDate = new Date(deal.expiry);
                 const now = new Date();
                 const diffTime = expiryDate - now;
+                const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
                   year: 'numeric', 
@@ -348,25 +351,28 @@ function renderPage() {
                   hour: '2-digit',
                   minute: '2-digit'
                 });
-                if (diffDays > 0) {
-                  return `<p class="text-sm mb-1"><span class="font-semibold">セール終了:</span> ${expiryDateStr} <span class="text-orange-500">(あと${diffDays}日)</span></p>`;
-                } else if (diffDays === 0) {
-                  return `<p class="text-sm mb-1"><span class="font-semibold">セール終了:</span> <span class="text-orange-500 font-semibold">今日</span></p>`;
+                
+                if (diffHours < 0) {
+                  return `<p class="text-sm mb-1 text-red-500 font-semibold"><span class="font-semibold">⏰ セール:</span> 終了済み</p>`;
+                } else if (diffHours < 24) {
+                  return `<p class="text-sm mb-1 text-red-500 font-semibold animate-pulse"><span class="font-semibold">⏰ セール終了:</span> 残り ${diffHours}時間</p>`;
+                } else if (diffDays <= 3) {
+                  return `<p class="text-sm mb-1 text-orange-500 font-semibold"><span class="font-semibold">⏰ セール終了:</span> ${expiryDateStr} (残り${diffDays}日)</p>`;
                 } else {
-                  return `<p class="text-sm mb-1"><span class="font-semibold">セール終了:</span> <span class="text-red-500 font-semibold">終了済み</span></p>`;
+                  return `<p class="text-sm mb-1"><span class="font-semibold">⏰ セール終了:</span> ${expiryDateStr}</p>`;
                 }
               } catch (e) {
                 return '';
               }
-            })() : ''}
-            ${deal.historyLow ? `<p class="text-sm"><span class="font-semibold">過去最安値:</span> ${deal.historyLow}円</p>` : ''}
+            })() : '<p class="text-sm mb-1 opacity-60"><span class="font-semibold">⏰ セール終了:</span> 不明（ストアで確認）</p>'}
+            ${deal.historyLow ? `<p class="flex items-center justify-between text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}"><span>🕒 過去最安値</span><span>${deal.historyLow}円</span></p>` : ''}
           </div>
         `;
 
         // 他のストアの情報を表示
         if (deal.otherDeals && deal.otherDeals.length > 0) {
           modalHtml += `
-            <div class="${bgClass} p-4 rounded-lg border ${borderClass}">
+            <div class="${bgClass} p-4 rounded-xl border ${borderClass} mt-4">
               <h3 class="text-lg font-semibold mb-3">🏪 他のストアの価格</h3>
               <div class="space-y-3">
           `;
@@ -378,6 +384,7 @@ function renderPage() {
                 const expiryDate = new Date(otherDeal.expiry);
                 const now = new Date();
                 const diffTime = expiryDate - now;
+                const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
                   year: 'numeric', 
@@ -386,12 +393,15 @@ function renderPage() {
                   hour: '2-digit',
                   minute: '2-digit'
                 });
-                if (diffDays > 0) {
-                  expiryHtml = `<p class="text-sm mb-1">セール終了: ${expiryDateStr} <span class="text-orange-500">(あと${diffDays}日)</span></p>`;
-                } else if (diffDays === 0) {
-                  expiryHtml = `<p class="text-sm mb-1">セール終了: <span class="text-orange-500 font-semibold">今日</span></p>`;
+                
+                if (diffHours < 0) {
+                  expiryHtml = `<p class="text-sm mb-1 text-red-500 font-semibold">⏰ 終了済み</p>`;
+                } else if (diffHours < 24) {
+                  expiryHtml = `<p class="text-sm mb-1 text-red-500 font-semibold animate-pulse">⏰ 残り ${diffHours}時間</p>`;
+                } else if (diffDays <= 3) {
+                  expiryHtml = `<p class="text-sm mb-1 text-orange-500 font-semibold">⏰ ${expiryDateStr} (残り${diffDays}日)</p>`;
                 } else {
-                  expiryHtml = `<p class="text-sm mb-1">セール終了: <span class="text-red-500 font-semibold">終了済み</span></p>`;
+                  expiryHtml = `<p class="text-sm mb-1">⏰ ${expiryDateStr}</p>`;
                 }
               } catch (e) {
                 // エラー時は何も表示しない
@@ -417,42 +427,97 @@ function renderPage() {
 
         modalContent.innerHTML = modalHtml;
 
-        // ウィッシュリスト追加ボタンのイベントリスナーを設定
-        const addToWishlistBtnModal = document.getElementById("addToWishlistBtnModal");
-        if (addToWishlistBtnModal) {
-          addToWishlistBtnModal.addEventListener("click", async () => {
-            if (!currentDeal) return;
+// モーダル内のウィッシュリスト追加ボタン
+const addToWishlistBtnModal = document.getElementById("addToWishlistBtnModal");
+if (addToWishlistBtnModal) {
+  addToWishlistBtnModal.addEventListener("click", async () => {
+    if (!currentDeal) return;
 
-            const gameId = currentDeal.gameID || currentDeal.id;
-            const data = {
-              gameId: gameId,
-              gameTitle: currentDeal.title,
-              gameImage: currentDeal.image,
-              currentPrice: currentDeal.priceNew,
-              shop: currentDeal.shop,
-              url: currentDeal.url
-            };
+    const gameId = currentDeal.gameID || currentDeal.id;
+    const data = {
+      gameId: gameId,
+      gameTitle: currentDeal.title,
+      gameImage: currentDeal.image,
+      currentPrice: currentDeal.priceNew,
+      priceOld: currentDeal.priceOld,
+      cut: currentDeal.cut,
+      shop: currentDeal.shop,
+      url: currentDeal.url,
+      // 過去最安値情報を追加
+      historyLow: currentDeal.historyLow,
+      historyLow1y: currentDeal.historyLow1y,
+      historyLow3m: currentDeal.historyLow3m,
+      storeLow: currentDeal.storeLow,
+      // セール終了日時を追加
+      expiry: currentDeal.expiry
+    };
 
-            try {
-              const res = await fetch("/api/wishlist", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-              });
+    try {
+      const res = await fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
 
-              const result = await res.json();
-              
-              if (result.success) {
-                alert("✅ ウィッシュリストに追加しました！");
-              } else {
-                alert("⚠️ " + result.message);
-              }
-            } catch (err) {
-              console.error(err);
-              alert("❌ エラーが発生しました");
-            }
-          });
-        }
+      const result = await res.json();
+      
+      if (result.success) {
+        alert("✅ ウィッシュリストに追加しました!");
+      } else {
+        alert("⚠️ " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("❌ エラーが発生しました");
+    }
+  });
+}
+
+// 下部のウィッシュリスト追加ボタン (既存のaddToWishlistBtn も同様に修正)
+const addToWishlistBtn = document.getElementById("addToWishlistBtn");
+if (addToWishlistBtn) {
+  addToWishlistBtn.addEventListener("click", async () => {
+    if (!currentDeal) return;
+
+    const gameId = currentDeal.gameID || currentDeal.id;
+    const data = {
+      gameId: gameId,
+      gameTitle: currentDeal.title,
+      gameImage: currentDeal.image,
+      currentPrice: currentDeal.priceNew,
+      priceOld: currentDeal.priceOld,
+      cut: currentDeal.cut,
+      shop: currentDeal.shop,
+      url: currentDeal.url,
+      // 過去最安値情報を追加
+      historyLow: currentDeal.historyLow,
+      historyLow1y: currentDeal.historyLow1y,
+      historyLow3m: currentDeal.historyLow3m,
+      storeLow: currentDeal.storeLow,
+      // セール終了日時を追加
+      expiry: currentDeal.expiry
+    };
+
+    try {
+      const res = await fetch("/api/wishlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+
+      const result = await res.json();
+      
+      if (result.success) {
+        alert("✅ ウィッシュリストに追加しました!");
+      } else {
+        alert("⚠️ " + result.message);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("❌ エラーが発生しました");
+    }
+  });
+}
 
       } catch (err) {
         console.error(err);
@@ -538,7 +603,11 @@ if (addToWishlistBtn) {
       gameImage: currentDeal.image,
       currentPrice: currentDeal.priceNew,
       shop: currentDeal.shop,
-      url: currentDeal.url
+      url: currentDeal.url,
+      priceOld: currentDeal.priceOld,
+      cut: currentDeal.cut,
+      expiry: currentDeal.expiry,
+      historyLow: currentDeal.historyLow
     };
 
     try {

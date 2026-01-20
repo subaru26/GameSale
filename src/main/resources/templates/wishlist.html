@@ -26,7 +26,7 @@
     }
   </style>
 </head>
-<body th:classappend="${!darkMode} ? 'light-mode' : ''" th:class="${darkMode} ? 'text-gray-100' : 'text-gray-800'">
+<body th:classappend="${!darkMode} ? 'light-mode' : ''" th:class="${darkMode} ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-800'">
   <div class="max-w-7xl mx-auto p-4">
     <!-- ヘッダー部分 -->
     <div th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
@@ -104,7 +104,67 @@
           <p th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
              class="text-sm mb-2" 
              th:text="'🏪 ' + ${item.shop}"></p>
-          <p class="text-red-500 font-bold text-xl mb-4" th:text="${item.currentPrice} + '円'"></p>
+          
+          <!-- 通常価格 -->
+          <p th:if="${item.priceOld != null}" 
+             th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
+             class="text-sm mb-1">
+            通常: <span class="line-through" th:text="${item.priceOld} + '円'"></span>
+          </p>
+          
+          <!-- セール価格 -->
+          <p class="text-red-500 font-bold text-xl mb-2" th:text="${item.currentPrice} + '円'"></p>
+          
+          <!-- 割引率 -->
+          <p th:if="${item.cut != null}" 
+             class="text-sm text-green-500 font-semibold mb-2" 
+             th:text="'💰 ' + ${item.cut} + '% OFF'"></p>
+          
+          <!-- セール終了日時 -->
+          <div th:if="${item.expiry != null}" class="mb-2">
+            <p class="text-sm" th:attr="data-expiry=${item.expiry}" id="expiry-text"></p>
+            <script th:inline="javascript">
+              (function() {
+                const expiryStr = /*[[${item.expiry}]]*/ null;
+                if (expiryStr) {
+                  try {
+                    const expiryDate = new Date(expiryStr);
+                    const now = new Date();
+                    const diffTime = expiryDate - now;
+                    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const element = document.currentScript.previousElementSibling;
+                    
+                    if (diffHours < 0) {
+                      element.className = 'text-sm text-red-500 font-semibold';
+                      element.textContent = '⏰ セール終了済み';
+                    } else if (diffHours < 24) {
+                      element.className = 'text-sm text-red-500 font-semibold animate-pulse';
+                      element.textContent = '⏰ 残り ' + diffHours + '時間';
+                    } else if (diffDays <= 3) {
+                      element.className = 'text-sm text-orange-500 font-semibold';
+                      element.textContent = '⏰ 残り ' + diffDays + '日';
+                    } else if (diffDays <= 7) {
+                      element.className = 'text-sm text-yellow-500 font-semibold';
+                      element.textContent = '⏰ 残り ' + diffDays + '日';
+                    } else {
+                      const dateStr = expiryDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
+                      element.className = 'text-sm [[${darkMode}]] ? text-gray-400 : text-gray-600';
+                      element.textContent = '⏰ ' + dateStr + 'まで';
+                    }
+                  } catch (e) {
+                    console.error('Error parsing expiry:', e);
+                  }
+                }
+              })();
+            </script>
+          </div>
+          
+          <!-- 過去最安値 -->
+          <p th:if="${item.historyLow != null}" 
+             th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
+             class="text-xs mb-3" 
+             th:text="'🕒 過去最安値: ' + ${item.historyLow} + '円'"></p>
           
           <!-- ストアリンクボタン -->
           <a th:if="${item.url != null and item.url != ''}"

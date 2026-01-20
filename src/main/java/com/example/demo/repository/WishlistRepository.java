@@ -1,9 +1,12 @@
 package com.example.demo.repository;
 
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -12,6 +15,8 @@ import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
@@ -20,18 +25,24 @@ import com.example.demo.entity.Wishlist;
 @Repository
 public class WishlistRepository {
 
+    private static final Logger logger = LoggerFactory.getLogger(WishlistRepository.class);
+
     @Value("${SUPABASE_URL}")
     private String supabaseUrl;
 
     @Value("${SUPABASE_KEY}")
     private String supabaseKey;
 
-    private final HttpClient client = HttpClient.newHttpClient();
+    private static final HttpClient client = HttpClient.newBuilder()
+        .connectTimeout(Duration.ofSeconds(10))
+        .build();
 
     // ユーザーのウィッシュリストを取得
     public List<Wishlist> findByUserId(Long userId) {
         try {
-            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + userId + "&select=*&order=added_at.desc");
+            String encodedUserId = URLEncoder.encode(String.valueOf(userId), StandardCharsets.UTF_8);
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&select=*&order=added_at.desc");
+            
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
                     .header("apikey", supabaseKey)
@@ -41,37 +52,64 @@ public class WishlistRepository {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() != 200) {
+                logger.error("Failed to fetch wishlist: HTTP {}", response.statusCode());
+                return new ArrayList<>();
+            }
+            
             JSONArray array = new JSONArray(response.body());
-
             List<Wishlist> wishlistItems = new ArrayList<>();
+            
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.getJSONObject(i);
                 Wishlist item = new Wishlist();
+                
                 item.setId(obj.getLong("id"));
                 item.setUserId(obj.getLong("user_id"));
                 item.setGameId(obj.getString("game_id"));
                 item.setGameTitle(obj.getString("game_title"));
                 item.setGameImage(obj.optString("game_image", null));
                 item.setCurrentPrice(obj.optDouble("current_price", 0.0));
+                item.setPriceOld(obj.optDouble("price_old", 0.0));
+                item.setCut(obj.optInt("cut", 0));
                 item.setShop(obj.optString("shop", null));
-                item.setUrl(obj.optString("url", null));  // URL追加;
+                item.setUrl(obj.optString("url", null));
                 
+                // 過去最安値情報
+                item.setHistoryLow(obj.has("history_low") && !obj.isNull("history_low") 
+                    ? obj.getDouble("history_low") : null);
+                item.setHistoryLow1y(obj.has("history_low_1y") && !obj.isNull("history_low_1y") 
+                    ? obj.getDouble("history_low_1y") : null);
+                item.setHistoryLow3m(obj.has("history_low_3m") && !obj.isNull("history_low_3m") 
+                    ? obj.getDouble("history_low_3m") : null);
+                item.setStoreLow(obj.has("store_low") && !obj.isNull("store_low") 
+                    ? obj.getDouble("store_low") : null);
+                
+                // セール終了日時
+                item.setExpiry(obj.optString("expiry", null));
+                
+                // 追加日時
                 String addedAtStr = obj.optString("added_at", null);
                 if (addedAtStr != null && !addedAtStr.isEmpty()) {
-                    // UTC時刻をパースしてJSTに変換
-                    ZonedDateTime utcTime = ZonedDateTime.parse(addedAtStr, 
-                        DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")));
-                    ZonedDateTime jstTime = utcTime.withZoneSameInstant(ZoneId.of("Asia/Tokyo"));
-                    item.setAddedAt(jstTime.toLocalDateTime());
+                    try {
+                        ZonedDateTime utcTime = ZonedDateTime.parse(addedAtStr, 
+                            DateTimeFormatter.ISO_DATE_TIME.withZone(ZoneId.of("UTC")));
+                        ZonedDateTime jstTime = utcTime.withZoneSameInstant(ZoneId.of("Asia/Tokyo"));
+                        item.setAddedAt(jstTime.toLocalDateTime());
+                    } catch (Exception e) {
+                        logger.warn("Failed to parse added_at date: {}", addedAtStr, e);
+                    }
                 }
                 
                 wishlistItems.add(item);
             }
 
+            logger.info("Successfully fetched {} wishlist items for user {}", wishlistItems.size(), userId);
             return wishlistItems;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error finding wishlist by userId: {}", userId, e);
             return new ArrayList<>();
         }
     }
@@ -81,13 +119,35 @@ public class WishlistRepository {
         try {
             URI uri = new URI(supabaseUrl + "/rest/v1/wishlist");
             JSONObject obj = new JSONObject();
+            
             obj.put("user_id", wishlist.getUserId());
             obj.put("game_id", wishlist.getGameId());
             obj.put("game_title", wishlist.getGameTitle());
             obj.put("game_image", wishlist.getGameImage());
             obj.put("current_price", wishlist.getCurrentPrice());
+            obj.put("price_old", wishlist.getPriceOld());
+            obj.put("cut", wishlist.getCut());
             obj.put("shop", wishlist.getShop());
-            obj.put("url", wishlist.getUrl());  // URL追加
+            obj.put("url", wishlist.getUrl());
+            
+            // 過去最安値情報を追加
+            if (wishlist.getHistoryLow() != null) {
+                obj.put("history_low", wishlist.getHistoryLow());
+            }
+            if (wishlist.getHistoryLow1y() != null) {
+                obj.put("history_low_1y", wishlist.getHistoryLow1y());
+            }
+            if (wishlist.getHistoryLow3m() != null) {
+                obj.put("history_low_3m", wishlist.getHistoryLow3m());
+            }
+            if (wishlist.getStoreLow() != null) {
+                obj.put("store_low", wishlist.getStoreLow());
+            }
+            
+            // セール終了日時
+            if (wishlist.getExpiry() != null) {
+                obj.put("expiry", wishlist.getExpiry());
+            }
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
@@ -99,10 +159,18 @@ public class WishlistRepository {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() == 201;
+            
+            boolean success = response.statusCode() == 201;
+            if (success) {
+                logger.info("Successfully added item to wishlist: {}", wishlist.getGameTitle());
+            } else {
+                logger.error("Failed to add to wishlist: HTTP {}", response.statusCode());
+            }
+            
+            return success;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error adding to wishlist: {}", wishlist.getGameTitle(), e);
             return false;
         }
     }
@@ -110,7 +178,11 @@ public class WishlistRepository {
     // ウィッシュリストから削除
     public boolean delete(Long userId, String gameId) {
         try {
-            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + userId + "&game_id=eq." + gameId);
+            String encodedUserId = URLEncoder.encode(String.valueOf(userId), StandardCharsets.UTF_8);
+            String encodedGameId = URLEncoder.encode(gameId, StandardCharsets.UTF_8);
+            
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId);
+            
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
                     .header("apikey", supabaseKey)
@@ -120,10 +192,18 @@ public class WishlistRepository {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.statusCode() == 204;
+            
+            boolean success = response.statusCode() == 204;
+            if (success) {
+                logger.info("Successfully deleted from wishlist: userId={}, gameId={}", userId, gameId);
+            } else {
+                logger.error("Failed to delete from wishlist: HTTP {}", response.statusCode());
+            }
+            
+            return success;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error deleting from wishlist: userId={}, gameId={}", userId, gameId, e);
             return false;
         }
     }
@@ -131,7 +211,11 @@ public class WishlistRepository {
     // 既にウィッシュリストに存在するか確認
     public boolean exists(Long userId, String gameId) {
         try {
-            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + userId + "&game_id=eq." + gameId + "&select=id");
+            String encodedUserId = URLEncoder.encode(String.valueOf(userId), StandardCharsets.UTF_8);
+            String encodedGameId = URLEncoder.encode(gameId, StandardCharsets.UTF_8);
+            
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId + "&select=id");
+            
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
                     .header("apikey", supabaseKey)
@@ -141,11 +225,17 @@ public class WishlistRepository {
                     .build();
 
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            if (response.statusCode() != 200) {
+                logger.error("Failed to check wishlist existence: HTTP {}", response.statusCode());
+                return false;
+            }
+            
             JSONArray array = new JSONArray(response.body());
             return array.length() > 0;
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error checking wishlist existence: userId={}, gameId={}", userId, gameId, e);
             return false;
         }
     }
