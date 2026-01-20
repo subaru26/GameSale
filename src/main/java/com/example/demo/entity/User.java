@@ -11,4 +11,5 @@ public class User {
     private String email;
     private String password;
     private boolean darkMode;  // ダークモード設定
+    private boolean wishlistNotifyEnabled; // ウィッシュリスト期限通知
 }

@@ -87,6 +87,7 @@
         <!-- 削除ボタン -->
         <button 
           th:data-game-id="${item.gameId}"
+          th:data-shop="${item.shop}"
           class="delete-btn absolute top-3 right-3 bg-red-500 text-white w-10 h-10 rounded-full hover:bg-red-600 transition-all z-10 shadow-xl font-bold text-xl">
           ×
         </button>
@@ -105,18 +106,18 @@
              class="text-sm mb-2" 
              th:text="'🏪 ' + ${item.shop}"></p>
           
-          <!-- 通常価格 -->
-          <p th:if="${item.priceOld != null}" 
+          <!-- 通常価格（セールがある場合のみ表示） -->
+          <p th:if="${item.priceOld != null and item.cut != null and item.cut > 0}" 
              th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
              class="text-sm mb-1">
-            通常: <span class="line-through" th:text="${item.priceOld} + '円'"></span>
+            通常: <span class="line-through" th:text="${T(java.lang.Math).floor(item.priceOld)} + '円'"></span>
           </p>
           
-          <!-- セール価格 -->
-          <p class="text-red-500 font-bold text-xl mb-2" th:text="${item.currentPrice} + '円'"></p>
+          <!-- 価格 -->
+          <p class="text-red-500 font-bold text-xl mb-2" th:text="${T(java.lang.Math).floor(item.currentPrice)} + '円'"></p>
           
-          <!-- 割引率 -->
-          <p th:if="${item.cut != null}" 
+          <!-- 割引率（セールがある場合のみ表示） -->
+          <p th:if="${item.cut != null and item.cut > 0}" 
              class="text-sm text-green-500 font-semibold mb-2" 
              th:text="'💰 ' + ${item.cut} + '% OFF'"></p>
           
@@ -135,22 +136,29 @@
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                     const element = document.currentScript.previousElementSibling;
                     
+                    const expiryDateStr = expiryDate.toLocaleDateString('ja-JP', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    });
+                    
                     if (diffHours < 0) {
                       element.className = 'text-sm text-red-500 font-semibold';
-                      element.textContent = '⏰ セール終了済み';
+                      element.textContent = '⏰ セール終了済み (' + expiryDateStr + ')';
                     } else if (diffHours < 24) {
                       element.className = 'text-sm text-red-500 font-semibold animate-pulse';
-                      element.textContent = '⏰ 残り ' + diffHours + '時間';
+                      element.textContent = '⏰ 残り ' + diffHours + '時間 (' + expiryDateStr + ')';
                     } else if (diffDays <= 3) {
                       element.className = 'text-sm text-orange-500 font-semibold';
-                      element.textContent = '⏰ 残り ' + diffDays + '日';
+                      element.textContent = '⏰ 残り ' + diffDays + '日 (' + expiryDateStr + ')';
                     } else if (diffDays <= 7) {
                       element.className = 'text-sm text-yellow-500 font-semibold';
-                      element.textContent = '⏰ 残り ' + diffDays + '日';
+                      element.textContent = '⏰ 残り ' + diffDays + '日 (' + expiryDateStr + ')';
                     } else {
-                      const dateStr = expiryDate.toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' });
                       element.className = 'text-sm [[${darkMode}]] ? text-gray-400 : text-gray-600';
-                      element.textContent = '⏰ ' + dateStr + 'まで';
+                      element.textContent = '⏰ ' + expiryDateStr + 'まで';
                     }
                   } catch (e) {
                     console.error('Error parsing expiry:', e);
@@ -164,7 +172,7 @@
           <p th:if="${item.historyLow != null}" 
              th:classappend="${darkMode} ? 'text-gray-400' : 'text-gray-600'" 
              class="text-xs mb-3" 
-             th:text="'🕒 過去最安値: ' + ${item.historyLow} + '円'"></p>
+             th:text="'🕒 過去最安値: ' + ${T(java.lang.Math).floor(item.historyLow)} + '円'"></p>
           
           <!-- ストアリンクボタン -->
           <a th:if="${item.url != null and item.url != ''}"
@@ -198,40 +206,156 @@
     </div>
   </div>
 
-  <script>
+  <!-- 確認モーダル -->
+  <div id="confirmModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div th:classappend="${darkMode} ? 'bg-gray-800 text-gray-100' : 'bg-white text-gray-800'"
+         class="rounded-2xl shadow-2xl p-6 max-w-md mx-4">
+      <h3 class="text-xl font-bold mb-4">確認</h3>
+      <p id="confirmMessage" class="mb-6"></p>
+      <div class="flex gap-3 justify-end">
+        <button id="confirmCancel" 
+                th:classappend="${darkMode} ? 'bg-gray-600 hover:bg-gray-700' : 'bg-gray-300 hover:bg-gray-400'"
+                class="px-6 py-2 rounded-lg transition-colors">キャンセル</button>
+        <button id="confirmOk" 
+                class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors">削除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+    <div id="toastContent" class="rounded-lg shadow-lg p-4 border-l-4 min-w-[300px] transition-all duration-300">
+      <div class="flex items-center">
+        <span id="toastIcon" class="text-2xl mr-3"></span>
+        <p id="toastMessage" class="flex-1 font-medium"></p>
+        <button id="toastClose" class="ml-4 text-gray-500 hover:text-gray-700 text-xl font-bold leading-none">×</button>
+      </div>
+    </div>
+  </div>
+
+  <script th:inline="javascript">
+    const darkMode = /*[[${darkMode != null ? darkMode : true}]]*/ true;
+    
+    // トースト通知表示関数
+    function showToast(message, isSuccess = true) {
+      const toast = document.getElementById("toast");
+      const toastContent = document.getElementById("toastContent");
+      const toastIcon = document.getElementById("toastIcon");
+      const toastMessage = document.getElementById("toastMessage");
+      const toastClose = document.getElementById("toastClose");
+      
+      if (!toast || !toastContent || !toastIcon || !toastMessage || !toastClose) return;
+      
+      // メッセージとアイコンを設定
+      toastMessage.textContent = message;
+      toastIcon.textContent = isSuccess ? "✅" : "⚠️";
+      
+      // スタイルを設定
+      const bgClass = darkMode 
+        ? (isSuccess ? "bg-gray-800 text-gray-100" : "bg-gray-800 text-gray-100")
+        : (isSuccess ? "bg-white text-gray-800" : "bg-white text-gray-800");
+      const borderColor = isSuccess ? "border-green-500" : "border-yellow-500";
+      
+      toastContent.className = `rounded-lg shadow-lg p-4 border-l-4 min-w-[300px] transition-all duration-300 ${bgClass} ${borderColor}`;
+      
+      // 表示
+      toast.classList.remove("hidden");
+      toast.style.opacity = "0";
+      toast.style.transform = "translateX(100%)";
+      
+      // アニメーション
+      setTimeout(() => {
+        toast.style.transition = "all 0.3s ease-out";
+        toast.style.opacity = "1";
+        toast.style.transform = "translateX(0)";
+      }, 10);
+      
+      // 閉じるボタンのイベント
+      const closeToast = () => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateX(100%)";
+        setTimeout(() => {
+          toast.classList.add("hidden");
+        }, 300);
+      };
+      
+      toastClose.onclick = closeToast;
+      
+      // 3秒後に自動で閉じる
+      setTimeout(closeToast, 3000);
+    }
+    
+    // 確認モーダル制御
+    let pendingDelete = null;
+    
+    const confirmModal = document.getElementById("confirmModal");
+    const confirmMessage = document.getElementById("confirmMessage");
+    const confirmCancel = document.getElementById("confirmCancel");
+    const confirmOk = document.getElementById("confirmOk");
+    
+    function showConfirmModal(message, onConfirm) {
+      confirmMessage.textContent = message;
+      pendingDelete = onConfirm;
+      confirmModal.classList.remove("hidden");
+      confirmModal.classList.add("flex");
+    }
+    
+    function hideConfirmModal() {
+      confirmModal.classList.add("hidden");
+      confirmModal.classList.remove("flex");
+      pendingDelete = null;
+    }
+    
+    confirmCancel.addEventListener("click", hideConfirmModal);
+    confirmOk.addEventListener("click", () => {
+      if (pendingDelete) {
+        pendingDelete();
+        hideConfirmModal();
+      }
+    });
+    
+    // モーダル外クリックで閉じる
+    confirmModal.addEventListener("click", (e) => {
+      if (e.target === confirmModal) {
+        hideConfirmModal();
+      }
+    });
+    
     // ウィッシュリストから削除
     document.querySelectorAll('.delete-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
+      btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const gameId = e.target.dataset.gameId;
+        const shop = e.target.dataset.shop;
+        const gameTitle = e.target.closest('div[class*="rounded-2xl"]').querySelector('h2').textContent;
         
-        if (!confirm('このゲームをウィッシュリストから削除しますか?')) {
-          return;
-        }
+        showConfirmModal(`「${gameTitle}」をウィッシュリストから削除しますか?`, async () => {
+          try {
+            const res = await fetch(`/api/wishlist?gameId=${encodeURIComponent(gameId)}&shop=${encodeURIComponent(shop)}`, {
+              method: 'DELETE'
+            });
 
-        try {
-          const res = await fetch(`/api/wishlist?gameId=${gameId}`, {
-            method: 'DELETE'
-          });
+            const result = await res.json();
 
-          const result = await res.json();
-
-          if (result.success) {
-            const card = e.target.closest('div[class*="rounded-2xl"]');
-            card.style.transition = 'all 0.3s ease';
-            card.style.opacity = '0';
-            card.style.transform = 'scale(0.8)';
-            
-            setTimeout(() => {
-              location.reload();
-            }, 300);
-          } else {
-            alert('❌ ' + result.message);
+            if (result.success) {
+              const card = e.target.closest('div[class*="rounded-2xl"]');
+              card.style.transition = 'all 0.3s ease';
+              card.style.opacity = '0';
+              card.style.transform = 'scale(0.8)';
+              
+              showToast('✅ ウィッシュリストから削除しました', true);
+              
+              setTimeout(() => {
+                location.reload();
+              }, 300);
+            } else {
+              showToast('❌ ' + result.message, false);
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('❌ エラーが発生しました', false);
           }
-        } catch (err) {
-          console.error(err);
-          alert('❌ エラーが発生しました');
-        }
+        });
       });
     });
   </script>

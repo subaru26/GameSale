@@ -63,4 +63,8 @@ public class UserService {
     public boolean updateDarkMode(Long userId, boolean darkMode) {
         return userRepository.updateDarkMode(userId, darkMode);
     }
+
+    public boolean updateWishlistNotifyEnabled(Long userId, boolean enabled) {
+        return userRepository.updateWishlistNotifyEnabled(userId, enabled);
+    }
 }

@@ -52,4 +52,21 @@ public class MailService {
         
         mailSender.send(message);
     }
+
+    // ウィッシュリスト期限通知（24時間前）
+    public void sendWishlistExpiryReminder(String to, String gameTitle, String shop, String url, String expiryIso) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(to);
+        message.setSubject("GameSale - セール終了間近のお知らせ");
+        StringBuilder body = new StringBuilder();
+        body.append("ウィッシュリストに登録したセールが、24時間以内に終了予定です。\n\n");
+        body.append("タイトル: ").append(gameTitle).append("\n");
+        if (shop != null && !shop.isBlank()) body.append("ストア: ").append(shop).append("\n");
+        if (expiryIso != null && !expiryIso.isBlank()) body.append("終了予定: ").append(expiryIso).append("\n");
+        if (url != null && !url.isBlank()) body.append("\nストアページ: ").append(url).append("\n");
+        body.append("\n※この通知は設定画面からOFFにできます。\n");
+        message.setText(body.toString());
+        mailSender.send(message);
+    }
 }

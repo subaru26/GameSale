@@ -22,19 +22,20 @@ public class WishlistService {
     // ウィッシュリストに追加
     public boolean addToWishlist(Wishlist wishlist) {
         // 既に存在する場合は追加しない
-        if (wishlistRepository.exists(wishlist.getUserId(), wishlist.getGameId())) {
+        if (wishlistRepository.exists(wishlist.getUserId(), wishlist.getGameId(), wishlist.getShop())) {
             return false;
         }
         return wishlistRepository.add(wishlist);
     }
 
     // ウィッシュリストから削除
-    public boolean removeFromWishlist(Long userId, String gameId) {
-        return wishlistRepository.delete(userId, gameId);
+    public boolean removeFromWishlist(Long userId, String gameId, String shop) {
+        return wishlistRepository.delete(userId, gameId, shop);
     }
 
     // ウィッシュリストに存在するか確認
     public boolean isInWishlist(Long userId, String gameId) {
-        return wishlistRepository.exists(userId, gameId);
+        // 互換用（shop指定なしの画面で使う場合）
+        return wishlistRepository.existsAnyShop(userId, gameId);
     }
 }

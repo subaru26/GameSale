@@ -217,6 +217,23 @@
 
     <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
          class="backdrop-blur-md rounded-2xl shadow-lg p-6 mb-4 neon-border">
+      <h2 class="text-xl font-semibold mb-4">📧 通知設定</h2>
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-medium">ウィッシュリストの期限通知</p>
+          <p th:classappend="${darkMode != null and darkMode} ? 'text-gray-400' : 'text-gray-600'"
+             class="text-sm">セール終了の24時間前にメールでお知らせします（期限が分かるもののみ）</p>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="wishlistNotifyToggle" th:checked="${wishlistNotifyEnabled}" class="sr-only peer">
+          <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
+      <div id="wishlistNotifyMessage" class="text-sm mt-3 hidden"></div>
+    </div>
+
+    <div th:classappend="${darkMode != null and darkMode} ? 'bg-gray-800/50' : 'bg-white/80'"
+         class="backdrop-blur-md rounded-2xl shadow-lg p-6 mb-4 neon-border">
       <h2 class="text-xl font-semibold mb-4">🧪 テストモード</h2>
       <div class="space-y-2">
         <div class="flex items-center justify-between">
@@ -376,6 +393,27 @@ const darkModeValueForDB = isLightModeChecked;
         if (result.success) setTimeout(() => location.reload(), 500);
       } catch (err) {
         console.error(err);
+      }
+    });
+
+    // 期限通知 ON/OFF
+    document.getElementById('wishlistNotifyToggle').addEventListener('change', async (e) => {
+      const enabled = e.target.checked;
+      const messageDiv = document.getElementById('wishlistNotifyMessage');
+      try {
+        const res = await fetch('/api/settings/wishlist-notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ enabled })
+        });
+        const result = await res.json();
+        messageDiv.classList.remove('hidden', 'text-red-600', 'text-green-600');
+        messageDiv.classList.add(result.success ? 'text-green-600' : 'text-red-600');
+        messageDiv.textContent = result.message;
+      } catch (err) {
+        messageDiv.classList.remove('hidden');
+        messageDiv.classList.add('text-red-600');
+        messageDiv.textContent = 'エラーが発生しました';
       }
     });
   </script>

@@ -190,6 +190,17 @@
     </div>
   </div>
 
+  <!-- トースト通知 -->
+  <div id="toast" class="fixed top-4 right-4 z-50 hidden">
+    <div id="toastContent" class="rounded-lg shadow-lg p-4 border-l-4 min-w-[300px] transition-all duration-300">
+      <div class="flex items-center">
+        <span id="toastIcon" class="text-2xl mr-3"></span>
+        <p id="toastMessage" class="flex-1 font-medium"></p>
+        <button id="toastClose" class="ml-4 text-gray-500 hover:text-gray-700 text-xl font-bold leading-none">×</button>
+      </div>
+    </div>
+  </div>
+
   <script th:inline="javascript">
     const darkMode = /*[[${darkMode != null ? darkMode : true}]]*/ true;
   </script>

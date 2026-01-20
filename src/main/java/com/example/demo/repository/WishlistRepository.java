@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -88,6 +89,9 @@ public class WishlistRepository {
                 
                 // セール終了日時
                 item.setExpiry(obj.optString("expiry", null));
+
+                // 通知送信済み（24h前）
+                item.setNotify24hSentAt(obj.optString("notify_24h_sent_at", null));
                 
                 // 追加日時
                 String addedAtStr = obj.optString("added_at", null);
@@ -176,12 +180,13 @@ public class WishlistRepository {
     }
 
     // ウィッシュリストから削除
-    public boolean delete(Long userId, String gameId) {
+    public boolean delete(Long userId, String gameId, String shop) {
         try {
             String encodedUserId = URLEncoder.encode(String.valueOf(userId), StandardCharsets.UTF_8);
             String encodedGameId = URLEncoder.encode(gameId, StandardCharsets.UTF_8);
+            String encodedShop = URLEncoder.encode(shop, StandardCharsets.UTF_8);
             
-            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId);
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId + "&shop=eq." + encodedShop);
             
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
@@ -209,12 +214,13 @@ public class WishlistRepository {
     }
 
     // 既にウィッシュリストに存在するか確認
-    public boolean exists(Long userId, String gameId) {
+    public boolean exists(Long userId, String gameId, String shop) {
         try {
             String encodedUserId = URLEncoder.encode(String.valueOf(userId), StandardCharsets.UTF_8);
             String encodedGameId = URLEncoder.encode(gameId, StandardCharsets.UTF_8);
+            String encodedShop = URLEncoder.encode(shop == null ? "" : shop, StandardCharsets.UTF_8);
             
-            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId + "&select=id");
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId + "&shop=eq." + encodedShop + "&select=id");
             
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
@@ -235,7 +241,110 @@ public class WishlistRepository {
             return array.length() > 0;
 
         } catch (Exception e) {
-            logger.error("Error checking wishlist existence: userId={}, gameId={}", userId, gameId, e);
+            logger.error("Error checking wishlist existence: userId={}, gameId={}, shop={}", userId, gameId, shop, e);
+            return false;
+        }
+    }
+
+    // 互換: gameIdが存在するか（shop問わず）
+    public boolean existsAnyShop(Long userId, String gameId) {
+        try {
+            String encodedUserId = URLEncoder.encode(String.valueOf(userId), StandardCharsets.UTF_8);
+            String encodedGameId = URLEncoder.encode(gameId, StandardCharsets.UTF_8);
+
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + encodedUserId + "&game_id=eq." + encodedGameId + "&select=id");
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) return false;
+            return new JSONArray(response.body()).length() > 0;
+        } catch (Exception e) {
+            logger.error("Error checking wishlist existence (any shop): userId={}, gameId={}", userId, gameId, e);
+            return false;
+        }
+    }
+
+    // 24時間前通知対象を取得（notify_24h_sent_atがnullのもの）
+    public List<Wishlist> findExpiringBetween(Instant fromInclusive, Instant toExclusive) {
+        try {
+            String from = URLEncoder.encode(fromInclusive.toString(), StandardCharsets.UTF_8);
+            String to = URLEncoder.encode(toExclusive.toString(), StandardCharsets.UTF_8);
+
+            // SupabaseはISO文字列比較でフィルタできる前提（timestamptz推奨）
+            URI uri = new URI(
+                supabaseUrl + "/rest/v1/wishlist"
+                + "?expiry=gte." + from
+                + "&expiry=lt." + to
+                + "&notify_24h_sent_at=is.null"
+                + "&select=*"
+            );
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() != 200) {
+                logger.error("Failed to fetch expiring wishlist: HTTP {}", response.statusCode());
+                return new ArrayList<>();
+            }
+
+            JSONArray array = new JSONArray(response.body());
+            List<Wishlist> list = new ArrayList<>();
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+                Wishlist item = new Wishlist();
+                item.setId(obj.getLong("id"));
+                item.setUserId(obj.getLong("user_id"));
+                item.setGameId(obj.getString("game_id"));
+                item.setGameTitle(obj.getString("game_title"));
+                item.setGameImage(obj.optString("game_image", null));
+                item.setCurrentPrice(obj.optDouble("current_price", 0.0));
+                item.setPriceOld(obj.optDouble("price_old", 0.0));
+                item.setCut(obj.optInt("cut", 0));
+                item.setShop(obj.optString("shop", null));
+                item.setUrl(obj.optString("url", null));
+                item.setExpiry(obj.optString("expiry", null));
+                item.setNotify24hSentAt(obj.optString("notify_24h_sent_at", null));
+                list.add(item);
+            }
+
+            return list;
+        } catch (Exception e) {
+            logger.error("Error finding expiring wishlist", e);
+            return new ArrayList<>();
+        }
+    }
+
+    public boolean markNotify24hSent(Long wishlistId, Instant sentAt) {
+        try {
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?id=eq." + wishlistId);
+            JSONObject obj = new JSONObject();
+            obj.put("notify_24h_sent_at", sentAt.toString());
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .header("Prefer", "return=minimal")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(obj.toString()))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 204;
+        } catch (Exception e) {
+            logger.error("Error marking notify_24h_sent_at: wishlistId={}", wishlistId, e);
             return false;
         }
     }

@@ -139,7 +139,9 @@ public class WishlistController {
     // ウィッシュリストから削除(API)
     @DeleteMapping("/api/wishlist")
     @ResponseBody
-    public Map<String, Object> removeFromWishlist(@RequestParam String gameId, HttpSession session) {
+    public Map<String, Object> removeFromWishlist(@RequestParam String gameId,
+                                                  @RequestParam(required = false) String shop,
+                                                  HttpSession session) {
         Map<String, Object> response = new HashMap<>();
 
         Map<String, String> user = (Map<String, String>) session.getAttribute("user");
@@ -151,13 +153,19 @@ public class WishlistController {
 
         try {
             Long userId = Long.parseLong(user.get("id"));
-            boolean success = wishlistService.removeFromWishlist(userId, gameId);
+            if (shop == null || shop.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "削除対象ストアが不正です");
+                return response;
+            }
+
+            boolean success = wishlistService.removeFromWishlist(userId, gameId, shop);
 
             response.put("success", success);
             response.put("message", success ? "削除しました" : "削除に失敗しました");
             
             if (success) {
-                logger.info("Removed from wishlist: userId={}, gameId={}", userId, gameId);
+                logger.info("Removed from wishlist: userId={}, gameId={}, shop={}", userId, gameId, shop);
             }
         } catch (Exception e) {
             logger.error("Error removing from wishlist", e);

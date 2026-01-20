@@ -44,6 +44,9 @@ public class SettingsController {
         // 【修正】DBのdarkModeがfalseなら、画面には「ダークモードである(true)」と伝える
         // これにより、初期値falseの新規ユーザーはダークモードで表示されます
         model.addAttribute("darkMode", user == null || !user.isDarkMode());
+
+        // 通知設定
+        model.addAttribute("wishlistNotifyEnabled", user == null || user.isWishlistNotifyEnabled());
         
         // テストモード状態を追加
         model.addAttribute("testModeEnabled", testModeEnabled);
@@ -165,6 +168,30 @@ public class SettingsController {
             response.put("message", "変更に失敗しました");
         }
 
+        return response;
+    }
+
+    // ウィッシュリスト通知 ON/OFF
+    @PostMapping("/api/settings/wishlist-notify")
+    @ResponseBody
+    public Map<String, Object> updateWishlistNotify(
+            @RequestParam boolean enabled,
+            HttpSession session) {
+
+        Map<String, Object> response = new HashMap<>();
+        Map<String, String> sessionUser = (Map<String, String>) session.getAttribute("user");
+
+        if (sessionUser == null) {
+            response.put("success", false);
+            response.put("message", "ログインが必要です");
+            return response;
+        }
+
+        Long userId = Long.parseLong(sessionUser.get("id"));
+        boolean success = userService.updateWishlistNotifyEnabled(userId, enabled);
+        response.put("success", success);
+        response.put("enabled", enabled);
+        response.put("message", success ? "設定を更新しました" : "変更に失敗しました");
         return response;
     }
 }

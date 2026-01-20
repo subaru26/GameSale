@@ -50,6 +50,7 @@ public class UserRepository {
             user.setEmail(obj.optString("email"));
             user.setPassword(obj.optString("password"));
             user.setDarkMode(obj.optBoolean("dark_mode", true)); // デフォルトをtrueに
+            user.setWishlistNotifyEnabled(obj.optBoolean("wishlist_notify_enabled", true));
             return Optional.of(user);
 
         } catch (Exception e) {
@@ -84,6 +85,7 @@ public class UserRepository {
             user.setEmail(obj.optString("email"));
             user.setPassword(obj.optString("password"));
             user.setDarkMode(obj.optBoolean("dark_mode", false));
+            user.setWishlistNotifyEnabled(obj.optBoolean("wishlist_notify_enabled", true));
             return Optional.of(user);
 
         } catch (Exception e) {
@@ -186,6 +188,29 @@ public class UserRepository {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 204;
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public boolean updateWishlistNotifyEnabled(Long userId, boolean enabled) {
+        try {
+            URI uri = new URI(supabaseUrl + "/rest/v1/users?id=eq." + userId);
+            JSONObject obj = new JSONObject();
+            obj.put("wishlist_notify_enabled", enabled);
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .header("Prefer", "return=minimal")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(obj.toString()))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            return response.statusCode() == 204;
         } catch (Exception e) {
             e.printStackTrace();
             return false;

@@ -27,6 +27,9 @@ public class Wishlist {
     
     // セール終了日時を追加
     private String expiry;
+
+    // 24時間前通知 送信済み日時（timestamptzのISO文字列を想定）
+    private String notify24hSentAt;
     
     private LocalDateTime addedAt;
 }
