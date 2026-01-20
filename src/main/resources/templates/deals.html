@@ -69,13 +69,21 @@
     <!-- 検索エリア -->
     <div th:classappend="${darkMode} ? 'bg-gray-800/50' : 'bg-white/80'" 
          class="backdrop-blur-md rounded-2xl p-6 mb-6 neon-border">
-      <div class="flex gap-4 items-center">
-        <input 
-          type="text" 
-          id="searchInput" 
-          placeholder="ゲーム名で検索（日本語可）"
-          th:classappend="${darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'"
-          class="flex-1 border px-4 py-3 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-cyan-500">
+      <div class="flex gap-4 items-center relative">
+        <div class="flex-1 relative">
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="ゲーム名で検索（日本語可）"
+            th:classappend="${darkMode} ? 'bg-gray-700 border-gray-600 text-gray-100 placeholder-gray-400' : 'bg-white border-gray-300 text-gray-800 placeholder-gray-500'"
+            class="w-full border px-4 py-3 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-cyan-500">
+          <!-- 検索履歴ドロップダウン -->
+          <div 
+            id="searchHistoryDropdown" 
+            th:classappend="${darkMode} ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-300'"
+            class="absolute top-full left-0 right-0 mt-1 border rounded-lg shadow-lg z-50 hidden max-h-60 overflow-y-auto">
+          </div>
+        </div>
         <button 
           id="searchBtn" 
           class="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-3 rounded-lg hover:shadow-xl transition-all font-semibold">

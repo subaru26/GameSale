@@ -427,6 +427,119 @@ function renderPage() {
 
         modalContent.innerHTML = modalHtml;
 
+        // ウィッシュリスト追加ボタンのイベントリスナーを設定
+        const addToWishlistBtnModal = document.getElementById("addToWishlistBtnModal");
+        if (addToWishlistBtnModal) {
+          addToWishlistBtnModal.addEventListener("click", async () => {
+            if (!currentDeal) return;
+
+            const gameId = currentDeal.gameID || currentDeal.id;
+            const data = {
+              gameId: gameId,
+              gameTitle: currentDeal.title,
+              gameImage: currentDeal.image,
+              currentPrice: currentDeal.priceNew,
+              shop: currentDeal.shop,
+              url: currentDeal.url,
+              priceOld: currentDeal.priceOld,
+              cut: currentDeal.cut,
+              expiry: currentDeal.expiry,
+              historyLow: currentDeal.historyLow
+            };
+
+            try {
+              const res = await fetch("/api/wishlist", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+              });
+
+              const result = await res.json();
+              
+              if (result.success) {
+                alert("✅ ウィッシュリストに追加しました！");
+              } else {
+                alert("⚠️ " + result.message);
+              }
+            } catch (err) {
+              console.error(err);
+              alert("❌ エラーが発生しました");
+            }
+          });
+        }
+
+      } catch (err) {
+        console.error(err);
+      }
+    });
+
+    setTimeout(() => {
+      card.classList.remove("opacity-0", "translate-y-4");
+      card.classList.add("opacity-100", "translate-y-0");
+    }, index * 10);
+  });
+
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage >= totalPages && !hasMoreData;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+sortSelect.addEventListener("change", async () => {
+  currentSort = sortSelect.value || "default";
+  dealsData = [];
+  currentPage = 1;
+  totalFetched = 0;
+  hasMoreData = true;
+
+  await fetchMoreDeals();
+  renderPage();
+});
+
+prevBtn.addEventListener("click", () => {
+  if (currentPage > 1) {
+    currentPage--;
+    renderPage();
+  }
+});
+
+nextBtn.addEventListener("click", async () => {
+  let filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : [...dealsData];
+  filteredDeals = applyLocalSort(filteredDeals);
+
+  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+
+  if (currentPage < totalPages) {
+    currentPage++;
+    renderPage();
+  } else if (hasMoreData && !isSearchMode) {
+    await fetchMoreDeals();
+    renderPage();
+  }
+});
+
+window.addEventListener("scroll", () => {
+  scrollTopBtn.style.display = window.scrollY > 200 ? "block" : "none";
+});
+
+scrollTopBtn.addEventListener("click", () => {
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+const modal = document.getElementById("gameModal");
+const closeModal = document.getElementById("closeModal");
+
+closeModal.addEventListener("click", () => {
+  modal.classList.add("hidden");
+  modal.classList.remove("flex");
+});
+
+modal.addEventListener("click", (e) => {
+  if (e.target === modal) {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+});
+
 // モーダル内のウィッシュリスト追加ボタン
 const addToWishlistBtnModal = document.getElementById("addToWishlistBtnModal");
 if (addToWishlistBtnModal) {
@@ -509,118 +622,6 @@ if (addToWishlistBtn) {
       
       if (result.success) {
         alert("✅ ウィッシュリストに追加しました!");
-      } else {
-        alert("⚠️ " + result.message);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("❌ エラーが発生しました");
-    }
-  });
-}
-
-      } catch (err) {
-        console.error(err);
-      }
-    });
-
-    setTimeout(() => {
-      card.classList.remove("opacity-0", "translate-y-4");
-      card.classList.add("opacity-100", "translate-y-0");
-    }, index * 10);
-  });
-
-  prevBtn.disabled = currentPage === 1;
-  nextBtn.disabled = currentPage >= totalPages && !hasMoreData;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-sortSelect.addEventListener("change", async () => {
-  currentSort = sortSelect.value || "default";
-  dealsData = [];
-  currentPage = 1;
-  totalFetched = 0;
-  hasMoreData = true;
-
-  await fetchMoreDeals();
-  renderPage();
-});
-
-prevBtn.addEventListener("click", () => {
-  if (currentPage > 1) {
-    currentPage--;
-    renderPage();
-  }
-});
-
-nextBtn.addEventListener("click", async () => {
-  let filteredDeals = excludeDLC ? dealsData.filter(d => !isDLC(d.title)) : [...dealsData];
-  filteredDeals = applyLocalSort(filteredDeals);
-
-  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
-
-  if (currentPage < totalPages) {
-    currentPage++;
-    renderPage();
-  } else if (hasMoreData && !isSearchMode) {
-    await fetchMoreDeals();
-    renderPage();
-  }
-});
-
-window.addEventListener("scroll", () => {
-  scrollTopBtn.style.display = window.scrollY > 200 ? "block" : "none";
-});
-
-scrollTopBtn.addEventListener("click", () => {
-  window.scrollTo({ top: 0, behavior: "smooth" });
-});
-
-const modal = document.getElementById("gameModal");
-const closeModal = document.getElementById("closeModal");
-
-closeModal.addEventListener("click", () => {
-  modal.classList.add("hidden");
-  modal.classList.remove("flex");
-});
-
-modal.addEventListener("click", (e) => {
-  if (e.target === modal) {
-    modal.classList.add("hidden");
-    modal.classList.remove("flex");
-  }
-});
-
-const addToWishlistBtn = document.getElementById("addToWishlistBtn");
-if (addToWishlistBtn) {
-  addToWishlistBtn.addEventListener("click", async () => {
-    if (!currentDeal) return;
-
-    const gameId = currentDeal.gameID || currentDeal.id;
-    const data = {
-      gameId: gameId,
-      gameTitle: currentDeal.title,
-      gameImage: currentDeal.image,
-      currentPrice: currentDeal.priceNew,
-      shop: currentDeal.shop,
-      url: currentDeal.url,
-      priceOld: currentDeal.priceOld,
-      cut: currentDeal.cut,
-      expiry: currentDeal.expiry,
-      historyLow: currentDeal.historyLow
-    };
-
-    try {
-      const res = await fetch("/api/wishlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-
-      const result = await res.json();
-      
-      if (result.success) {
-        alert("✅ ウィッシュリストに追加しました！");
       } else {
         alert("⚠️ " + result.message);
       }
