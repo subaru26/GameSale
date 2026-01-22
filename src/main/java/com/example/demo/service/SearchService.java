@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,11 +25,23 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Service
 public class SearchService {
 
-    private static final String ITAD_API_KEY = "1c17fd70c2b436ce327b048ce319119b8bdcd4e2";
-    private static final String DEEPL_API_KEY = "d69817ca-9139-4eb9-a332-695e3e468cbd:fx";
-    private static final String ITAD_SEARCH_URL = "https://api.isthereanydeal.com/games/search/v1";
-    private static final String ITAD_PRICE_URL = "https://api.isthereanydeal.com/games/prices/v3";
-    private static final String DEEPL_API_URL = "https://api-free.deepl.com/v2/translate";
+    @Value("${ITAD_API_KEY}")
+    private String itadApiKey;
+
+    @Value("${DEEPL_API_KEY}")
+    private String deeplApiKey;
+
+    @Value("${ITAD_SEARCH_URL}")
+    private String itadSearchUrl;
+
+    @Value("${ITAD_PRICE_URL}")
+    private String itadPriceUrl;
+
+    @Value("${DEEPL_API_URL}")
+    private String deeplApiUrl;
+
+    @Value("${ITAD_INFO_URL}")
+    private String itadInfoUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -54,7 +67,7 @@ public class SearchService {
      */
     private String translateToEnglish(String japaneseText) {
         try {
-            String url = DEEPL_API_URL + "?auth_key=" + DEEPL_API_KEY
+            String url = deeplApiUrl + "?auth_key=" + deeplApiKey
                     + "&text=" + java.net.URLEncoder.encode(japaneseText, StandardCharsets.UTF_8)
                     + "&source_lang=JA&target_lang=EN";
 
@@ -95,7 +108,7 @@ public class SearchService {
             // JSON配列を作成
             String jsonBody = objectMapper.writeValueAsString(gameIds);
             
-            String url = ITAD_PRICE_URL + "?key=" + ITAD_API_KEY + "&country=JP";
+            String url = itadPriceUrl + "?key=" + itadApiKey + "&country=JP";
 
             System.out.println("[SearchService] Fetching prices: " + url);
             System.out.println("[SearchService] Request body: " + jsonBody);
@@ -316,7 +329,7 @@ public class SearchService {
      */
     private String fetchGameImage(String gameId) {
         try {
-            String url = "https://api.isthereanydeal.com/games/info/v2?key=" + ITAD_API_KEY + "&id=" + gameId;
+            String url = itadInfoUrl + "?key=" + itadApiKey + "&id=" + gameId;
             
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -352,7 +365,7 @@ public class SearchService {
         List<ApiSearchResponse> results = new ArrayList<>();
         
         try {
-            String url = ITAD_SEARCH_URL + "?key=" + ITAD_API_KEY
+            String url = itadSearchUrl + "?key=" + itadApiKey
                     + "&title=" + java.net.URLEncoder.encode(gameTitle, StandardCharsets.UTF_8);
 
             System.out.println("[SearchService] Searching games: " + url);

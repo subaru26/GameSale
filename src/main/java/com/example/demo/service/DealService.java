@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -14,8 +15,11 @@ import com.example.demo.dto.front.DealDto;
 @Service
 public class DealService {
 
-    private static final String API_KEY = "1c17fd70c2b436ce327b048ce319119b8bdcd4e2";
-    private static final String BASE_URL = "https://api.isthereanydeal.com/deals/v2";
+    @Value("${ITAD_API_KEY}")
+    private String apiKey;
+
+    @Value("${ITAD_DEALS_URL}")
+    private String baseUrl;
 
     private static final Map<String, String> SHOP_IDS = Map.of(
         "steam", "61",
@@ -34,7 +38,7 @@ public class DealService {
                 .reduce((a, b) -> a + "," + b)
                 .orElse("61"); // デフォルトSteam
 
-        String url = BASE_URL + "?key=" + API_KEY
+        String url = baseUrl + "?key=" + apiKey
                 + "&shops=" + shopsParam
                 + "&country=jp"
                 + "&offset=" + offset

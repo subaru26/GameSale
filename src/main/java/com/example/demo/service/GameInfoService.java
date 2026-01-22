@@ -2,18 +2,22 @@ package com.example.demo.service;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
 public class GameInfoService {
 
-    private static final String API_KEY = "1c17fd70c2b436ce327b048ce319119b8bdcd4e2";
-    private static final String BASE_URL = "https://api.isthereanydeal.com/games/info/v2";
+    @Value("${ITAD_API_KEY}")
+    private String apiKey;
+
+    @Value("${ITAD_INFO_URL}")
+    private String baseUrl;
 
     public Map<String, Object> fetchGameInfo(String id) {
         RestTemplate restTemplate = new RestTemplate();
-        String url = BASE_URL + "?key=" + API_KEY + "&id=" + id;
+        String url = baseUrl + "?key=" + apiKey + "&id=" + id;
 
         System.out.println("[GameInfoService] Fetching from: " + url);
 
