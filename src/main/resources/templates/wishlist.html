@@ -330,31 +330,31 @@
         const gameTitle = e.target.closest('div[class*="rounded-2xl"]').querySelector('h2').textContent;
         
         showConfirmModal(`「${gameTitle}」をウィッシュリストから削除しますか?`, async () => {
-          try {
+        try {
             const res = await fetch(`/api/wishlist?gameId=${encodeURIComponent(gameId)}&shop=${encodeURIComponent(shop)}`, {
-              method: 'DELETE'
-            });
+            method: 'DELETE'
+          });
 
-            const result = await res.json();
+          const result = await res.json();
 
-            if (result.success) {
-              const card = e.target.closest('div[class*="rounded-2xl"]');
-              card.style.transition = 'all 0.3s ease';
-              card.style.opacity = '0';
-              card.style.transform = 'scale(0.8)';
+          if (result.success) {
+            const card = e.target.closest('div[class*="rounded-2xl"]');
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '0';
+            card.style.transform = 'scale(0.8)';
               
               showToast('✅ ウィッシュリストから削除しました', true);
-              
-              setTimeout(() => {
-                location.reload();
-              }, 300);
-            } else {
+            
+            setTimeout(() => {
+              location.reload();
+            }, 300);
+          } else {
               showToast('❌ ' + result.message, false);
-            }
-          } catch (err) {
-            console.error(err);
-            showToast('❌ エラーが発生しました', false);
           }
+        } catch (err) {
+          console.error(err);
+            showToast('❌ エラーが発生しました', false);
+        }
         });
       });
     });

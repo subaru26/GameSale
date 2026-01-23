@@ -44,7 +44,7 @@ public class SettingsController {
         // 【修正】DBのdarkModeがfalseなら、画面には「ダークモードである(true)」と伝える
         // これにより、初期値falseの新規ユーザーはダークモードで表示されます
         model.addAttribute("darkMode", user == null || !user.isDarkMode());
-
+        
         // 通知設定
         model.addAttribute("wishlistNotifyEnabled", user == null || user.isWishlistNotifyEnabled());
         
