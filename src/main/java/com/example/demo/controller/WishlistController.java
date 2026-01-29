@@ -12,6 +12,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -129,6 +130,49 @@ public class WishlistController {
             response.put("message", "データ形式が不正です");
         } catch (Exception e) {
             logger.error("Error adding to wishlist", e);
+            response.put("success", false);
+            response.put("message", "エラーが発生しました");
+        }
+
+        return response;
+    }
+
+    // ウィッシュリスト更新(API)
+    @PutMapping("/api/wishlist")
+    @ResponseBody
+    public Map<String, Object> updateWishlist(@RequestBody Map<String, Object> requestData, HttpSession session) {
+        Map<String, Object> response = new HashMap<>();
+
+        Map<String, String> user = (Map<String, String>) session.getAttribute("user");
+        if (user == null) {
+            response.put("success", false);
+            response.put("message", "ログインが必要です");
+            return response;
+        }
+
+        try {
+            Long userId = Long.parseLong(user.get("id"));
+            String gameId = (String) requestData.get("gameId");
+            String shop = (String) requestData.get("shop");
+
+            if (gameId == null || gameId.trim().isEmpty()) {
+                response.put("success", false);
+                response.put("message", "ゲームIDが指定されていません");
+                return response;
+            }
+
+            boolean success = wishlistService.refreshWishlistItem(userId, gameId, shop);
+
+            if (success) {
+                response.put("success", true);
+                response.put("message", "更新しました");
+            } else {
+                response.put("success", false);
+                response.put("message", "更新に失敗しました（アイテムが見つからないか、APIエラー）");
+            }
+
+        } catch (Exception e) {
+            logger.error("Error updating wishlist", e);
             response.put("success", false);
             response.put("message", "エラーが発生しました");
         }

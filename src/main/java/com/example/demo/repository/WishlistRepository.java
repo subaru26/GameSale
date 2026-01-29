@@ -171,10 +171,64 @@ public class WishlistRepository {
                 logger.error("Failed to add to wishlist: HTTP {}", response.statusCode());
             }
             
+            
             return success;
 
         } catch (Exception e) {
             logger.error("Error adding to wishlist: {}", wishlist.getGameTitle(), e);
+            return false;
+        }
+    }
+
+    // ウィッシュリストを更新
+    public boolean update(Wishlist wishlist) {
+        try {
+            URI uri = new URI(supabaseUrl + "/rest/v1/wishlist?user_id=eq." + wishlist.getUserId() 
+                + "&game_id=eq." + wishlist.getGameId() 
+                + "&shop=eq." + URLEncoder.encode(wishlist.getShop() == null ? "" : wishlist.getShop(), StandardCharsets.UTF_8));
+                
+            JSONObject obj = new JSONObject();
+            
+            // 価格情報更新
+            obj.put("current_price", wishlist.getCurrentPrice());
+            obj.put("price_old", wishlist.getPriceOld());
+            obj.put("cut", wishlist.getCut());
+            
+            // 過去最安値情報を更新
+            if (wishlist.getHistoryLow() != null) obj.put("history_low", wishlist.getHistoryLow());
+            if (wishlist.getHistoryLow1y() != null) obj.put("history_low_1y", wishlist.getHistoryLow1y());
+            if (wishlist.getHistoryLow3m() != null) obj.put("history_low_3m", wishlist.getHistoryLow3m());
+            if (wishlist.getStoreLow() != null) obj.put("store_low", wishlist.getStoreLow());
+            
+            // セール終了日時
+            if (wishlist.getExpiry() != null) {
+                obj.put("expiry", wishlist.getExpiry());
+            } else {
+                obj.put("expiry", JSONObject.NULL);
+            }
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .header("apikey", supabaseKey)
+                    .header("Authorization", "Bearer " + supabaseKey)
+                    .header("Content-Type", "application/json")
+                    .header("Prefer", "return=minimal")
+                    .method("PATCH", HttpRequest.BodyPublishers.ofString(obj.toString()))
+                    .build();
+
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            
+            boolean success = response.statusCode() == 204; // No Content
+            if (success) {
+                logger.info("Successfully updated wishlist item: userId={}, gameId={}", wishlist.getUserId(), wishlist.getGameId());
+            } else {
+                logger.error("Failed to update wishlist: HTTP {}", response.statusCode());
+            }
+            
+            return success;
+
+        } catch (Exception e) {
+            logger.error("Error updating wishlist: userId={}, gameId={}", wishlist.getUserId(), wishlist.getGameId(), e);
             return false;
         }
     }
